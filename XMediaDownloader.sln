@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XMediaDownloader", "XMediaDownloader\XMediaDownloader.csproj", "{7EFAF6BA-1CD1-4DEB-8863-EEFF3A510F72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAMDownload.Core", "TAMDownload.Core\TAMDownload.Core.csproj", "{7D2DEBA3-37CB-44EC-86E7-848847335D47}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAMDownload.Config", "TAMDownload.Config\TAMDownload.Config.csproj", "{94A6AC70-BD27-4D26-AC29-A61E9516FF3C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7EFAF6BA-1CD1-4DEB-8863-EEFF3A510F72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EFAF6BA-1CD1-4DEB-8863-EEFF3A510F72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EFAF6BA-1CD1-4DEB-8863-EEFF3A510F72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EFAF6BA-1CD1-4DEB-8863-EEFF3A510F72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D2DEBA3-37CB-44EC-86E7-848847335D47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D2DEBA3-37CB-44EC-86E7-848847335D47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D2DEBA3-37CB-44EC-86E7-848847335D47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D2DEBA3-37CB-44EC-86E7-848847335D47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94A6AC70-BD27-4D26-AC29-A61E9516FF3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94A6AC70-BD27-4D26-AC29-A61E9516FF3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94A6AC70-BD27-4D26-AC29-A61E9516FF3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94A6AC70-BD27-4D26-AC29-A61E9516FF3C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
