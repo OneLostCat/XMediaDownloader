@@ -7,7 +7,7 @@ namespace XMediaDownloader;
 public class MainService(
     CommandLineArguments arguments,
     ILogger<MainService> logger,
-    XApiService apiService,
+    XApiService api,
     IHostApplicationLifetime lifetime) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken cancel)
@@ -16,12 +16,12 @@ public class MainService(
         OutputArgumentsInfo();
 
         // 获取目标 UserId
-        var user = await apiService.GetUserAsync(arguments.Username, cancel);
+        var user = await api.GetUserAsync(arguments.Username, cancel);
         
         OutputUserInfo(user);
 
         // 获取媒体
-        await apiService.GetMediaAsync(user.Id, cancel);
+        await api.GetMediaAsync(user.Id, cancel);
 
         // 下载媒体
 

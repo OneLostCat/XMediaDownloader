@@ -4,28 +4,28 @@ namespace XMediaDownloader.Models.GraphQl;
 
 public record UserMediaResponse
 {
-    public required UserContent User { get; set; }
+    [JsonPropertyName("user")] public required UserContent User { get; set; }
 }
 
 public record UserContent
 {
-    public required UserResult Result { get; set; }
+    [JsonPropertyName("result")] public required UserResult Result { get; set; }
 }
 
 public record UserResult
 {
-    public required TimelineV2Content TimelineV2 { get; set; }
+    [JsonPropertyName("timeline_v2")] public required TimelineV2Content TimelineV2 { get; set; }
 }
 
 public record TimelineV2Content
 {
-    public required TimelineContent Timeline { get; set; }
+    [JsonPropertyName("timeline")] public required TimelineContent Timeline { get; set; }
 }
 
 public record TimelineContent
 {
-    public required TimelineMetadata Metadata { get; set; }
-    public List<Instruction> Instructions { get; set; } = [];
+    [JsonPropertyName("metadata")] public required TimelineMetadata Metadata { get; set; }
+    [JsonPropertyName("instructions")] public List<Instruction> Instructions { get; set; } = [];
 }
 
 public record TimelineMetadata
@@ -35,118 +35,93 @@ public record TimelineMetadata
 
 public record ScribeConfig
 {
-    public required string Page { get; set; }
+    [JsonPropertyName("page")] public required string Page { get; set; }
 }
 
 public record Instruction
 {
-    public required string Type { get; set; }
-    public required string Direction { get; set; }
-    public List<TimelineEntry> Entries { get; set; } = [];
+    [JsonPropertyName("type")] public required string Type { get; set; }
+    [JsonPropertyName("direction")] public required string Direction { get; set; }
+    [JsonPropertyName("entries")] public List<TimelineEntry> Entries { get; set; } = [];
     [JsonPropertyName("moduleItems")] public List<ItemMedia> ModuleItems { get; set; } = [];
 }
 
 public record TimelineEntry
 {
-    [JsonPropertyName("entryId")]
-    public required string EntryId { get; set; }
+    [JsonPropertyName("entryId")] public required string EntryId { get; set; }
 
-    [JsonPropertyName("sortIndex")]
-    public required string SortIndex { get; set; }
+    [JsonPropertyName("sortIndex")] public required string SortIndex { get; set; }
 
-    [JsonPropertyName("content")]
-    public required EntryContent Content { get; set; }
+    [JsonPropertyName("content")] public required EntryContent Content { get; set; }
 }
 
 public record EntryContent
 {
-    [JsonPropertyName("entryType")]
-    public required string EntryType { get; set; }
-    
-    [JsonPropertyName("itemContent")]
-    public required ItemContent ItemContent { get; set; }
+    [JsonPropertyName("entryType")] public required string EntryType { get; set; }
 
-    [JsonPropertyName("value")]
-    public required string Value { get; set; }
+    [JsonPropertyName("itemContent")] public required ItemContent ItemContent { get; set; }
+
+    [JsonPropertyName("value")] public required string Value { get; set; }
 
     // Media API使用
-    [JsonPropertyName("items")]
-    public List<ItemMedia> Items { get; set; } = [];
+    [JsonPropertyName("items")] public List<ItemMedia> Items { get; set; } = [];
 
-    [JsonPropertyName("cursorType")]
-    public required string CursorType { get; set; }
+    [JsonPropertyName("cursorType")] public required string CursorType { get; set; }
 }
 
 public record ItemMedia
 {
-    [JsonPropertyName("entryId")]
-    public required string EntryId { get; set; }
+    [JsonPropertyName("entryId")] public required string EntryId { get; set; }
 
-    [JsonPropertyName("item")]
-    public required ItemDetail Item { get; set; }
+    [JsonPropertyName("item")] public required ItemDetail Item { get; set; }
 }
 
 public record ItemDetail
 {
-    [JsonPropertyName("itemContent")]
-    public required ItemContent ItemContent { get; set; }
+    [JsonPropertyName("itemContent")] public required ItemContent ItemContent { get; set; }
 }
 
 public record ItemContent
 {
-    [JsonPropertyName("itemType")]
-    public required string ItemType { get; set; }
-    
-    [JsonPropertyName("tweet_results")]
-    public required TweetResults TweetResults { get; set; }
+    [JsonPropertyName("itemType")] public required string ItemType { get; set; }
 
-    [JsonPropertyName("tweetDisplayType")]
-    public required string TweetDisplayType { get; set; }
+    [JsonPropertyName("tweet_results")] public required TweetResults TweetResults { get; set; }
+
+    [JsonPropertyName("tweetDisplayType")] public required string TweetDisplayType { get; set; }
 }
 
 public record TweetResults
 {
-    [JsonPropertyName("result")]
-    public required TweetResult Result { get; set; }
+    [JsonPropertyName("result")] public required TweetResult Result { get; set; }
 }
 
 public record TweetResult
 {
-    [JsonPropertyName("rest_id")]
-    public required string RestId { get; set; }
+    [JsonPropertyName("rest_id")] public required string RestId { get; set; }
 
-    [JsonPropertyName("core")]
-    public required CoreInfo Core { get; set; }
+    [JsonPropertyName("core")] public required CoreInfo Core { get; set; }
 
-    [JsonPropertyName("legacy")]
-    public required LegacyInfo Legacy { get; set; }
+    [JsonPropertyName("legacy")] public required LegacyInfo Legacy { get; set; }
 
-    [JsonPropertyName("tweet")]
-    public required TweetResult Tweet { get; set; }
+    [JsonPropertyName("tweet")] public required TweetResult Tweet { get; set; }
 
-    [JsonPropertyName("tombstone")]
-    public required object Tombstone { get; set; }
+    [JsonPropertyName("tombstone")] public required object Tombstone { get; set; }
 
-    [JsonPropertyName("views")]
-    public required ViewInfo Views { get; set; }
+    [JsonPropertyName("views")] public required ViewInfo Views { get; set; }
 }
 
 public record CoreInfo
 {
-    [JsonPropertyName("user_results")]
-    public required UserResults UserResults { get; set; }
+    [JsonPropertyName("user_results")] public required UserResults UserResults { get; set; }
 }
 
 public record LegacyInfo
 {
-    [JsonPropertyName("created_at")]
-    public required string CreatedAt { get; set; }
+    [JsonPropertyName("created_at")] public required string CreatedAt { get; set; }
 
-    [JsonPropertyName("full_text")]
-    public required string FullText { get; set; }
+    [JsonPropertyName("full_text")] public required string FullText { get; set; }
 
-    [JsonPropertyName("entities")]
-    public required Entities Entities { get; set; }
+    [JsonPropertyName("entities")] public required Entities Entities { get; set; }
 
     [JsonPropertyName("extended_entities")]
     public required ExtendedEntities ExtendedEntities { get; set; }
@@ -154,61 +129,50 @@ public record LegacyInfo
 
 public record ViewInfo
 {
-    [JsonPropertyName("count")]
-    public required string Count { get; set; }
+    [JsonPropertyName("count")] public required string Count { get; set; }
 
-    [JsonPropertyName("state")]
-    public required string State { get; set; }
+    [JsonPropertyName("state")] public required string State { get; set; }
 }
 
 public record Entities
 {
-    [JsonPropertyName("hashtags")]
-    public List<HashTag> Hashtags { get; set; } = [];
+    [JsonPropertyName("hashtags")] public List<HashTag> Hashtags { get; set; } = [];
 
-    [JsonPropertyName("media")]
-    public List<MediaEntity> Media { get; set; } = [];
+    [JsonPropertyName("media")] public List<MediaEntity> Media { get; set; } = [];
 }
 
 public record ExtendedEntities
 {
-    [JsonPropertyName("media")]
-    public List<MediaEntity> Media { get; set; } = [];
+    [JsonPropertyName("media")] public List<MediaEntity> Media { get; set; } = [];
 }
 
 public record HashTag
 {
-    [JsonPropertyName("text")]
-    public required string Text { get; set; }
+    [JsonPropertyName("text")] public required string Text { get; set; }
 }
 
 public record MediaEntity
 {
-    [JsonPropertyName("type")]
-    public required string Type { get; set; }
+    [JsonPropertyName("type")] public required string Type { get; set; }
 
-    [JsonPropertyName("media_url_https")]
-    public required string MediaUrlHttps { get; set; }
+    [JsonPropertyName("media_url_https")] public required string MediaUrlHttps { get; set; }
 
-    [JsonPropertyName("video_info")]
-    public required VideoInfo VideoInfo { get; set; }
+    [JsonPropertyName("video_info")] public required VideoInfo VideoInfo { get; set; }
 }
 
 public record VideoInfo
 {
-    [JsonPropertyName("variants")]
-    public List<VideoVariant> Variants { get; set; } = [];
+    [JsonPropertyName("variants")] public List<VideoVariant> Variants { get; set; } = [];
 }
 
 public record VideoVariant
 {
-    [JsonPropertyName("url")]
-    public required string Url { get; set; }
-    
-    [JsonPropertyName("bitrate")]
-    public long? Bitrate { get; set; } 
+    [JsonPropertyName("url")] public required string Url { get; set; }
+
+    [JsonPropertyName("bitrate")] public long? Bitrate { get; set; }
 }
 
 // Json 序列化
 [JsonSerializable(typeof(GraphQlResponse<UserMediaResponse>))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 public partial class UserMediaResponseContext : JsonSerializerContext;

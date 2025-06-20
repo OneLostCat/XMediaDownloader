@@ -9,4 +9,5 @@ public record ProfileSpotlightsResponse
 
 // Json 序列化
 [JsonSerializable(typeof(GraphQlResponse<ProfileSpotlightsResponse>))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 public partial class ProfileSpotlightsResponseContext : JsonSerializerContext;

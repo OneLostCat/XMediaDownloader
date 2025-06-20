@@ -40,4 +40,5 @@ public record UserDataItem
 
 // Json 序列化
 [JsonSerializable(typeof(StorageContent))]
+[JsonSourceGenerationOptions(WriteIndented = true)]
 public partial class StorageContentContext : JsonSerializerContext;
