@@ -9,6 +9,8 @@ using XMediaDownloader;
 using XMediaDownloader.Models;
 
 // 命令行
+var logLevelOption = new Option<LogEventLevel>(["-l", "--log-level"], () => LogEventLevel.Information, "日志级别");
+
 // 下载选项
 var usernameOption = new Option<string>(["-u", "--username"], "目标用户") { IsRequired = true };
 var downloadTypeListOption = new Option<List<DownloadType>>(["-t", "--download-type"], "下载类型")
@@ -22,6 +24,7 @@ var filenameOption = new Option<string>(["-f", "--filename"], "输出文件名�
 // 根命令
 var command = new RootCommand("X 媒体下载工具");
 
+command.AddOption(logLevelOption);
 command.AddOption(usernameOption);
 command.AddOption(downloadTypeListOption);
 command.AddOption(cookieFileOption);
@@ -30,25 +33,27 @@ command.AddOption(filenameOption);
 
 command.SetHandler(async context =>
 {
+    var logLevel = context.ParseResult.GetValueForOption(logLevelOption);
     var username = context.ParseResult.GetValueForOption(usernameOption)!;
-    var downloadType = context.ParseResult.GetValueForOption(downloadTypeListOption)!.Aggregate((a, b) => a | b); // 按位合并参数
+    var downloadType = context.ParseResult.GetValueForOption(downloadTypeListOption)!.Aggregate((a, b) => a | b); // 合并参数
     var cookieFile = context.ParseResult.GetValueForOption(cookieFileOption)!;
     var dir = context.ParseResult.GetValueForOption(dirOption)!;
     var filename = context.ParseResult.GetValueForOption(filenameOption)!;
 
-    await RunAsync(username, downloadType, cookieFile, dir, filename, context.GetCancellationToken());
+    await RunAsync(logLevel, username, downloadType, cookieFile, dir, filename, context.GetCancellationToken());
 });
 
 return await command.InvokeAsync(args);
 
 
-static async Task RunAsync(string username, DownloadType downloadType, FileInfo cookieFile, string dir, string filename,
+static async Task RunAsync(LogEventLevel logLevel, string username, DownloadType downloadType, FileInfo cookieFile, string dir, string filename,
     CancellationToken cancel)
 {
     // 日志
     await using var logger = new LoggerConfiguration()
         .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:lj}{NewLine}{Exception}")
         // .WriteTo.Console(outputTemplate: "[{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+        .MinimumLevel.Is(logLevel)
         .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
         // .MinimumLevel.Override("Microsoft.Extensions.Hosting.Internal.Host", LogEventLevel.Warning)
         // .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
@@ -74,13 +79,13 @@ static async Task RunAsync(string username, DownloadType downloadType, FileInfo 
 
         // 主机日志
         builder.Services.AddSerilog();
-        
+
         // 主服务
         builder.Services.AddHostedService<MainService>();
-        
+
         // X API 服务
         builder.Services.AddSingleton<XApiService>();
-        
+
         // 存储服务
         builder.Services.AddSingleton<StorageService>();
 
@@ -131,7 +136,8 @@ static async Task AddHttpClientAsync(IServiceCollection serviceCollection, FileI
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0");
 
         // 验证
-        config.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", XApiService.Bearer);
+        config.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+            "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA");
         config.DefaultRequestHeaders.Add("x-csrf-token", cookie.GetCookies(new Uri(XApiService.BaseUrl))["ct0"]?.Value);
         config.DefaultRequestHeaders.Add("x-twitter-active-user", "yes");
         config.DefaultRequestHeaders.Add("x-twitter-auth-type", "OAuth2Session");
