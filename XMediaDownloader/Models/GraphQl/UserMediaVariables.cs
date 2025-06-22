@@ -16,5 +16,5 @@ public record UserMediaVariables
 
 // Json 序列化
 [JsonSerializable(typeof(UserMediaVariables))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
 public partial class UserMediaVariablesContext : JsonSerializerContext;

@@ -127,12 +127,12 @@ public record LegacyInfo
     [JsonPropertyName("full_text")] public required string FullText { get; set; }
     [JsonPropertyName("entities")] public required Entities Entities { get; set; }
     [JsonPropertyName("extended_entities")]
-    public required ExtendedEntities ExtendedEntities { get; set; }
+    public ExtendedEntities? ExtendedEntities { get; set; } // 可能为空
 }
 
 public record ViewInfo
 {
-    [JsonPropertyName("count")] public required string Count { get; set; }
+    [JsonPropertyName("count")] public string? Count { get; set; } // 可能为空
     [JsonPropertyName("state")] public required string State { get; set; }
 }
 
@@ -167,10 +167,10 @@ public record VideoInfo
 public record VideoVariant
 {
     [JsonPropertyName("url")] public required string Url { get; set; }
-    [JsonPropertyName("bitrate")] public long? Bitrate { get; set; }
+    [JsonPropertyName("bitrate")] public int? Bitrate { get; set; } // 可能为空，原类型为 long?
 }
 
 // Json 序列化
 [JsonSerializable(typeof(GraphQlResponse<UserMediaResponse>))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
 public partial class UserMediaResponseContext : JsonSerializerContext;

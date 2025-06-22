@@ -2,20 +2,19 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using XMediaDownloader.Models;
 using XMediaDownloader.Models.GraphQl;
 
 namespace XMediaDownloader;
 
-public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpClientFact, StorageService storage)
+public class XApiService(ILogger<XApiService> logger, StorageService storage, [FromKeyedServices("Api")] HttpClient httpClient)
 {
     // API 信息
-    public const string BaseUrl = "https://x.com";
-    
     private const string UserByScreenNameUrl = "/i/api/graphql/1VOOyvKkiI3FMmkeDNxM9A/UserByScreenName";
     private const string UserMediaUrl = "/i/api/graphql/BGmkmGDG0kZPM-aoQtNTTw/UserMedia";
-    
+
     private const string UserByScreenNameFeatures =
         "{\"creator_subscriptions_tweet_preview_api_enabled\":true," +
         "\"hidden_profile_subscriptions_enabled\":true," +
@@ -29,6 +28,7 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
         "\"subscriptions_verification_info_is_identity_verified_enabled\":true," +
         "\"subscriptions_verification_info_verified_since_enabled\":true," +
         "\"verified_phone_label_enabled\":false}";
+
     private const string UserMediaFeatures =
         "{\"profile_label_improvements_pcf_label_in_post_enabled\":false," +
         "\"rweb_tipjar_consumption_enabled\":true," +
@@ -58,26 +58,19 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
         "\"longform_notetweets_rich_text_read_enabled\":true," +
         "\"longform_notetweets_inline_media_enabled\":true," +
         "\"responsive_web_enhance_cards_enabled\":false}";
-    
-    private const string TimeFormat = "ddd MMM dd HH:mm:ss zzz yyyy"; 
 
-    private readonly HttpClient _httpClient = httpClientFact.CreateClient("X");
+    private const string TimeFormat = "ddd MMM dd HH:mm:ss zzz yyyy";
 
-    // 公开方法
+    // 主要方法
     public async Task<User> GetUserAsync(string username, CancellationToken cancel)
     {
-        logger.LogInformation("获取用户信息: {Username}", username);
-
         // 参数
         var variables = JsonSerializer.Serialize(new UserByScreenNameVariables { ScreenName = username },
             UserByScreenNameVariablesContext.Default.UserByScreenNameVariables);
 
-        // 创建请求
-        var request = new HttpRequestMessage(HttpMethod.Get,
-            BuildUrl(UserByScreenNameUrl, variables, UserByScreenNameFeatures, "{\"withAuxiliaryUserLabels\":true}"));
-
         // 发送请求
-        var response = await _httpClient.SendAsync(request, cancel);
+        var response = await httpClient.GetAsync(
+            BuildUrl(UserByScreenNameUrl, variables, UserByScreenNameFeatures, "{\"withAuxiliaryUserLabels\":true}"), cancel);
 
         // 解析响应
         var content = await response.Content.ReadFromJsonAsync<GraphQlResponse<UserByScreenNameResponse>>(
@@ -85,62 +78,89 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
 
         if (content?.Data == null) throw new Exception("无法获取用户信息"); // 无法判断是否会为空
 
-
-        // 生成用户信息
-        var user = content.Data.User.Result;
-
-        return new User
+        // 解析用户信息
+        var result = content.Data.User.Result;
+        var user = new User
         {
-            Id = user.RestId,
-            Username = user.Legacy.ScreenName,
-            Name = user.Legacy.Name,
-            Description = user.Legacy.Description,
-            CreationTime = DateTimeOffset.ParseExact(user.Legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
-            MediaCount = user.Legacy.MediaCount
+            Id = result.RestId,
+            Name = result.Legacy.ScreenName,
+            Nickname = result.Legacy.Name,
+            Description = result.Legacy.Description,
+            CreationTime = DateTimeOffset.ParseExact(result.Legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
+            MediaCount = result.Legacy.MediaCount
         };
+
+        return user;
     }
 
-    public async Task GetMediaAsync(User user, CancellationToken cancel)
+    public async Task GetMediaAsync(string userId, CancellationToken cancel)
     {
-        // 加载数据
-        await storage.LoadAsync();
-        var cursor = storage.Content.Data.GetValueOrDefault(user.Id)?.CurrentCursor ?? "";
+        var data = storage.Content.Users[userId];
+        var tweets = data.Tweets;
+        var cursor = data.CurrentCursor ?? ""; // 当前指针
+
+        var totalMediaCount = data.Info.MediaCount; // 总媒体数量
+        var tweetCount = tweets.Count; // 当前帖子数量
+        var mediaCount = tweets.Sum(x => x.Value.Media.Count); // 当前媒体数量
+
+        logger.LogInformation("开始获取信息");
 
         while (true)
         {
-            var (nextCursor, newTweets) = await GetMediaAsync(user.Id, cursor, 40, cancel);
+            // 检查是否取消
+            cancel.ThrowIfCancellationRequested();
+            
+            // 获取媒体
+            var (newTweets, nextCursor) = await GetMediaAsync(userId, cursor, 20, cancel);
 
+            // 如果没有更多媒体则退出
             if (newTweets.Count == 0) break;
 
-            // 储存帖子
-            storage.AddData(user, nextCursor, newTweets);
-            await storage.SaveAsync();
+            foreach (var tweet in newTweets)
+            {
+                // 合并帖子
+                var isNew = tweets.TryAdd(tweet.Id, tweet);
+                
+                // 增加帖子计数
+                if (isNew) tweetCount++;
+                
+                logger.LogInformation("获取信息 {CreationTime:yyyy-MM-dd HH:mm:ss zzz} {Id}", tweet.CreationTime, tweet.Id);
 
-            cursor = nextCursor;
+                foreach (var media in tweet.Media)
+                {
+                    // 增加媒体计数
+                    if (isNew) mediaCount++;
 
-            await Task.Delay(1000, cancel); // 等待避免请求速率过快
+                    logger.LogInformation("  {Type} {Url} ({MediaCount} / {TotalMediaCount})", media.Type, media.Url, mediaCount,
+                        totalMediaCount);
+                }
+            }
+
+            // 更新指针
+            data.CurrentCursor = cursor = nextCursor;
+
+            // 避免请求速率过快
+            // await Task.Delay(1000, cancel);
         }
+
+        logger.LogInformation("信息获取完成: 成功获取 {TweetCount} 条帖子 / {MediaCount} 个媒体", tweetCount, mediaCount);
     }
 
-    // 私有方法
-    private async Task<(string, List<Tweet>)> GetMediaAsync(string userId, string cursor, int count, CancellationToken cancel)
+    private async Task<(List<Tweet>, string)> GetMediaAsync(string userId, string cursor, int count, CancellationToken cancel)
     {
         // 参数
         var variables = JsonSerializer.Serialize(new UserMediaVariables { UserId = userId, Cursor = cursor, Count = count },
             UserMediaVariablesContext.Default.UserMediaVariables);
 
-        // 创建请求
-        var request = new HttpRequestMessage(HttpMethod.Get,
-            BuildUrl(UserMediaUrl, variables, UserMediaFeatures, "{\"withArticlePlainText\":false}"));
-
         // 发送请求
-        var response = await _httpClient.SendAsync(request, cancel);
+        var response = await httpClient.GetAsync(
+            BuildUrl(UserMediaUrl, variables, UserMediaFeatures, "{\"withArticlePlainText\":false}"), cancel);
 
         // 解析
         var content = await response.Content.ReadFromJsonAsync<GraphQlResponse<UserMediaResponse>>(
             UserMediaResponseContext.Default.GraphQlResponseUserMediaResponse, cancel);
 
-        if (content?.Data == null) throw new Exception("无法获取媒体"); // 无法判断是否会为空
+        if (content?.Data == null) throw new Exception("无法获取用户媒体"); // 无法判断是否会为空
 
         // 获取帖子
         var newTweets = new List<Tweet>();
@@ -154,7 +174,7 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
                 {
                     if (entry.EntryId.StartsWith("profile-"))
                     {
-                        var tweet = ProcessTweetMedia(entry);
+                        var tweet = ProcessTweets(entry);
 
                         if (tweet.Count != 0)
                         {
@@ -171,17 +191,18 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
             {
                 newTweets.AddRange(instruction.ModuleItems
                         .Where(entry => entry.EntryId.StartsWith("profile-"))
-                        .Select(ProcessTweetMediaSingle)
+                        .Select(ProcessTweet)
                     // .Where(x => x != null)
                     // .OfType<Tweet>()
                 );
             }
         }
 
-        return (nextCursor, newTweets);
+        return (newTweets, nextCursor);
     }
 
-    private List<Tweet> ProcessTweetMedia(TimelineEntry entry)
+    // 工具方法
+    private static List<Tweet> ProcessTweets(TimelineEntry entry)
     {
         var tweets = new List<Tweet>();
 
@@ -206,10 +227,10 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
             {
                 Id = tweetResult.RestId,
                 UserId = userInfo.RestId,
+                CreationTime = DateTimeOffset.ParseExact(tweetResult.Legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
                 Text = tweetResult.Legacy.FullText,
                 Hashtags = tweetResult.Legacy.Entities.Hashtags.Select(x => x.Text).ToList(),
-                CreationTime = DateTimeOffset.ParseExact(tweetResult.Legacy.CreatedAt,TimeFormat,CultureInfo.InvariantCulture),
-                Media = ProcessMedia(tweetResult.Legacy.ExtendedEntities.Media)
+                Media = ProcessMedia(tweetResult.Legacy.ExtendedEntities?.Media ?? throw new Exception("无法获取媒体")) // 无法判断是否会为空
             };
 
             tweets.Add(tweet);
@@ -218,7 +239,7 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
         return tweets;
     }
 
-    private Tweet ProcessTweetMediaSingle(ItemMedia entry)
+    private static Tweet ProcessTweet(ItemMedia entry)
     {
         var tweetResult = entry.Item.ItemContent.TweetResults.Result;
 
@@ -235,31 +256,34 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
         {
             Id = tweetResult.RestId,
             UserId = userInfo.RestId,
+            CreationTime = DateTimeOffset.ParseExact(tweetResult.Legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
             Text = tweetResult.Legacy.FullText,
             Hashtags = tweetResult.Legacy.Entities.Hashtags.Select(x => x.Text).ToList(),
-            CreationTime = DateTimeOffset.ParseExact(tweetResult.Legacy.CreatedAt,TimeFormat,CultureInfo.InvariantCulture),
             Media = ProcessMedia(tweetResult.Legacy.Entities.Media)
         };
     }
 
-    private List<TweetMedia> ProcessMedia(List<MediaEntity> mediaEntities)
+    private static List<Media> ProcessMedia(List<MediaEntity> mediaEntities)
     {
-        if (mediaEntities.Count == 0) return [];
+        // if (mediaEntities.Count == 0) return [];
 
-        return mediaEntities.Select(x => new TweetMedia
+        return mediaEntities.Select(x => new Media
         {
-            Type = x.Type,
-            Url = x.Type == "photo"
-                ? GetOriginalImageUrl(x.MediaUrlHttps)
-                : GetHighestQualityVideoUrl(x.VideoInfo ?? throw new Exception("无法获取视频信息")), // 无法判断是否会为空
-            Bitrate = x.Type == "video" ? GetHighestBitrate(x.VideoInfo ?? throw new Exception("无法获取视频信息")) : null // 无法判断是否会为空
+            Type = x.Type switch
+            {
+                "photo" => MediaType.Image,
+                "video" => MediaType.Video,
+                "animated_gif" => MediaType.Gif,
+                _ => throw new ArgumentException("未知媒体类型", x.Type)
+            },
+            Url = x.MediaUrlHttps,
+            Video = x.VideoInfo?.Variants.Select(y => new Video { Url = y.Url, Bitrate = y.Bitrate }).ToList() ?? []
         }).ToList();
     }
 
-    // 工具方法
-    private string BuildUrl(string endpoint, string variables, string? features = null, string? fieldToggles = null)
+    private static string BuildUrl(string endpoint, string variables, string? features = null, string? fieldToggles = null)
     {
-        var sb = new StringBuilder(BaseUrl + endpoint + $"?variables={variables}");
+        var sb = new StringBuilder(endpoint + $"?variables={variables}");
 
         if (features != null)
         {
@@ -274,7 +298,7 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
         return sb.ToString();
     }
 
-    // private User GetUserInfo(MediaUserResult user) => new()
+    // private static User GetUserInfo(MediaUserResult user) => new()
     // {
     //     Id = user.RestId ?? throw new Exception("用户 ID 不能为空"), // 无法判断是否会为空
     //     Username = user.Legacy.ScreenName ?? throw new Exception("用户名不能为空"), // 无法判断是否会为空
@@ -283,23 +307,4 @@ public class XApiService(ILogger<XApiService> logger, IHttpClientFactory httpCli
     //     CreationTime = DateTimeOffset.UtcNow,
     //     MediaCount = 0 // TODO
     // };
-
-    private string GetOriginalImageUrl(string url)
-    {
-        var parts = url.Split('.');
-        var ext = parts.Last();
-        var basePath = string.Join(".", parts.Take(parts.Length - 1));
-
-        return $"{basePath}?format={ext}&name=orig";
-    }
-
-    private string GetHighestQualityVideoUrl(VideoInfo videoInfo) => videoInfo.Variants
-        .Where(x => x.Bitrate.HasValue)
-        .OrderByDescending(x => x.Bitrate)
-        .First()
-        .Url;
-
-    private long? GetHighestBitrate(VideoInfo videoInfo) => videoInfo.Variants
-        .Where(v => v.Bitrate.HasValue)
-        .Max(v => v.Bitrate);
 }

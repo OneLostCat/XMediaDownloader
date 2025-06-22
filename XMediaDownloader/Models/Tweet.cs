@@ -4,15 +4,21 @@ public record Tweet
 {
     public required string Id { get; set; }
     public required string UserId { get; set; }
+    public required DateTimeOffset CreationTime { get; set; }
     public required string Text { get; set; }
     public List<string> Hashtags { get; set; } = [];
-    public required DateTimeOffset CreationTime { get; set; }
-    public List<TweetMedia> Media { get; set; } = [];
+    public List<Media> Media { get; set; } = [];
 }
 
-public record TweetMedia
+public record Media
 {
-    public required string Type { get; set; }
+    public required MediaType Type { get; set; }
     public required string Url { get; set; }
-    public long? Bitrate { get; set; } // 可能为空，原项目类型为 long
+    public List<Video> Video { get; set; } = [];
+}
+
+public record Video
+{
+    public required string Url { get; set; }
+    public required int? Bitrate { get; set; } // 可能为空，原项目类型为 long
 }

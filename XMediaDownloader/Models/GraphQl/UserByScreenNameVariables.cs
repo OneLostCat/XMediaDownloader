@@ -9,5 +9,5 @@ public record UserByScreenNameVariables
 
 // Json 序列化
 [JsonSerializable(typeof(UserByScreenNameVariables))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower, UseStringEnumConverter = true)]
 public partial class UserByScreenNameVariablesContext : JsonSerializerContext;

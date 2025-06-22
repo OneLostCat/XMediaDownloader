@@ -21,7 +21,7 @@ public record UserByScreenNameResponseResult
 
 public record UserByScreenNameResponseLegacy
 {
-    public required string ScreenName { get; set; }  
+    public required string ScreenName { get; set; }
     public required string Name { get; set; }
     public required string Description { get; set; }
     public required string CreatedAt { get; set; }
@@ -30,5 +30,5 @@ public record UserByScreenNameResponseLegacy
 
 // Json 序列化
 [JsonSerializable(typeof(GraphQlResponse<UserByScreenNameResponse>))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower, UseStringEnumConverter = true)]
 public partial class UserByScreenNameResponseContext : JsonSerializerContext;

@@ -2,10 +2,11 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using XMediaDownloader.Models;
+using static System.String;
 
 namespace XMediaDownloader;
 
-public class StorageService(ILogger<StorageService> logger) : IAsyncDisposable
+public class StorageService(ILogger<StorageService> logger)
 {
     private const string FilePath = "storage.json";
 
@@ -16,6 +17,11 @@ public class StorageService(ILogger<StorageService> logger) : IAsyncDisposable
         WriteIndented = true
     };
 
+    // 使用降序排列
+    public static readonly Comparer<string> IdComparer =
+        Comparer<string>.Create((a, b) => Compare(b, a, StringComparison.Ordinal));
+
+    // 公开成员
     public StorageContent Content { get; set; } = new();
 
     public async Task SaveAsync()
@@ -26,7 +32,7 @@ public class StorageService(ILogger<StorageService> logger) : IAsyncDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(FilePath))!); // 使用 ! 禁用警告
 
             // 打开文件
-            await using var fs = File.Open(FilePath, FileMode.Create); // 使用 FileMode.Create 覆盖文件
+            await using var fs = File.Create(FilePath); // 使用 File.Create 覆盖文件
 
             // 序列化并写入文件
 #pragma warning disable IL2026
@@ -34,7 +40,7 @@ public class StorageService(ILogger<StorageService> logger) : IAsyncDisposable
             await JsonSerializer.SerializeAsync(fs, Content, _jsonSerializerOptions);
 #pragma warning restore IL3050
 #pragma warning restore IL2026
-            
+
             logger.LogDebug("数据保存成功");
         }
         catch (Exception exception)
@@ -56,49 +62,29 @@ public class StorageService(ILogger<StorageService> logger) : IAsyncDisposable
             // 打开文件
             await using var fs = File.OpenRead(FilePath);
 
-            // 反序列化
+            // 读取并反序列化文件
 #pragma warning disable IL2026
 #pragma warning disable IL3050
-            var data = await JsonSerializer.DeserializeAsync(fs, typeof(StorageContent), _jsonSerializerOptions) as StorageContent;
+            if (await JsonSerializer.DeserializeAsync(fs, typeof(StorageContent), _jsonSerializerOptions) is not StorageContent data)
 #pragma warning restore IL3050
 #pragma warning restore IL2026
-            
-            if (data == null)
             {
                 logger.LogError("数据加载失败");
                 return;
             }
-            
+
+            // 将帖子转换成降序排列
+            foreach (var pair in data.Users)
+            {
+                pair.Value.Tweets = new SortedDictionary<string, Tweet>(pair.Value.Tweets, IdComparer);
+            }
+
             logger.LogDebug("数据加载成功");
             Content = data;
         }
         catch (Exception exception)
         {
             logger.LogError(exception, "数据加载失败");
-        }
-    }
-
-    public void AddData(User user, string cursor, List<Tweet> tweets)
-    {
-        // 如果用户不存在则创建
-        if (!Content.Data.TryGetValue(user.Id, out var data))
-        {
-            Content.Data[user.Id] = new UserData
-            {
-                Info = user,
-                Tweets = tweets.ToDictionary(x => x.Id),
-                CurrentCursor = cursor
-            };
-            return;
-        }
-        
-        // 更新指针
-        data.CurrentCursor = cursor;
-        
-        // 合并推文
-        foreach (var tweet in tweets)
-        {
-            data.Tweets.TryAdd(tweet.Id, tweet);
         }
     }
 
@@ -153,11 +139,4 @@ public class StorageService(ILogger<StorageService> logger) : IAsyncDisposable
     //         }
     //     }
     // }
-
-    public async ValueTask DisposeAsync()
-    {
-        await SaveAsync();
-
-        GC.SuppressFinalize(this);
-    }
 }
