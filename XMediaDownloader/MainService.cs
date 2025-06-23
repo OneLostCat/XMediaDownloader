@@ -61,7 +61,7 @@ public class MainService(
         if (!args.WithoutDownloadInfo)
         {
             // 获取用户信息
-            user = await api.GetUserAsync(args.Username, cancel);
+            user = await api.GetUserByScreenNameAsync(args.Username, cancel);
 
             // 储存用户信息
             if (!storage.Content.Users.TryGetValue(user.Id, out var data))

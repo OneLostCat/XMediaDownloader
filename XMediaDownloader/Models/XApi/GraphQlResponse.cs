@@ -1,4 +1,4 @@
-﻿namespace XMediaDownloader.Models.GraphQl;
+﻿namespace XMediaDownloader.Models.XApi;
 
 public record GraphQlResponse<T>
 {

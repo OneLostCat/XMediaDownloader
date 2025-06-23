@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using XMediaDownloader.Models;
-using static System.String;
 
 namespace XMediaDownloader;
 
@@ -19,7 +18,7 @@ public class StorageService(ILogger<StorageService> logger)
 
     // 使用降序排列
     public static readonly Comparer<string> IdComparer =
-        Comparer<string>.Create((a, b) => Compare(b, a, StringComparison.Ordinal));
+        Comparer<string>.Create((a, b) => string.Compare(b, a, StringComparison.Ordinal));
 
     // 公开成员
     public StorageContent Content { get; set; } = new();

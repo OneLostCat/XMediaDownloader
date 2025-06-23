@@ -5,7 +5,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using XMediaDownloader.Models;
-using XMediaDownloader.Models.GraphQl;
+using XMediaDownloader.Models.XApi;
 
 namespace XMediaDownloader;
 
@@ -65,7 +65,7 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
     private const string TimeFormat = "ddd MMM dd HH:mm:ss zzz yyyy";
 
     // 主要方法
-    public async Task<User> GetUserAsync(string username, CancellationToken cancel)
+    public async Task<User> GetUserByScreenNameAsync(string username, CancellationToken cancel)
     {
         // 参数
         var variables = JsonSerializer.Serialize(new UserByScreenNameVariables { ScreenName = username },
@@ -94,6 +94,10 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         };
 
         return user;
+    }
+
+    public async Task GetUserTweetsAsync(string userId, CancellationToken cancel)
+    {
     }
 
     public async Task GetUserMediaAsync(string userId, CancellationToken cancel)
