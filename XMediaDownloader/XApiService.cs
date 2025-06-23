@@ -12,9 +12,10 @@ namespace XMediaDownloader;
 public class XApiService(ILogger<XApiService> logger, StorageService storage, [FromKeyedServices("Api")] HttpClient httpClient)
 {
     // API 端点
-    public const string BaseUrl = "https://x.com/i/api/graphql";
-    private const string UserByScreenNameUrl = "/1VOOyvKkiI3FMmkeDNxM9A/UserByScreenName";
-    private const string UserMediaUrl = "/BGmkmGDG0kZPM-aoQtNTTw/UserMedia";
+    public const string BaseUrl = "https://x.com/i/api/graphql/";
+    private const string UserByScreenNameUrl = "1VOOyvKkiI3FMmkeDNxM9A/UserByScreenName";
+    private const string UserTweets = "q6xj5bs0hapm9309hexA_g/UserTweets";
+    private const string UserMediaUrl = "BGmkmGDG0kZPM-aoQtNTTw/UserMedia";
 
     #region Features
     private const string UserByScreenNameFeatures =
