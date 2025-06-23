@@ -10,14 +10,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="GraphQL" Version="8.5.0" />
-      <PackageReference Include="GraphQL.MicrosoftDI" Version="8.5.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
       <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.6.0" />
       <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
       <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-      <PackageReference Include="System.Linq.Async" Version="6.0.3" />
     </ItemGroup>
 
 </Project>
