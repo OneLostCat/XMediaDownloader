@@ -50,8 +50,8 @@ var command = new RootCommand("X 媒体下载工具")
     downloadTypeOption,
     withoutDownloadInfoOption,
     withoutDownloadMediaOption,
-    logLevelOption,
-    storageDirOption
+    storageDirOption,
+    logLevelOption
 };
 
 command.SetAction((result, cancel) => Run(
@@ -75,8 +75,8 @@ var convertCommand = new Command("convert", "X 媒体路径格式转换工具")
     originPathFormatOption,
     outputPathFormatOption,
     withoutDownloadInfoOption,
-    logLevelOption,
-    storageDirOption
+    storageDirOption,
+    logLevelOption
 };
 
 command.Add(convertCommand);
