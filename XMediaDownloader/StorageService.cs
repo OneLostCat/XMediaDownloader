@@ -17,8 +17,8 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
     public static readonly Comparer<string> IdComparer = Comparer<string>.Create((a, b) =>
         string.Compare(b, a, StringComparison.Ordinal)); // 使用降序排列
 
-    private readonly string _dirPath = args.StorageDir.Name;
-    private readonly string _filePath = Path.Combine(args.StorageDir.Name, "storage.json");
+    private readonly DirectoryInfo _dir = args.StorageDir;
+    private readonly FileInfo _file = new(Path.Combine(args.StorageDir.FullName, "storage.json"));
 
     // 公开成员
     public StorageContent Content { get; private set; } = new();
@@ -28,11 +28,10 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
         try
         {
             // 创建目录
-            Directory.CreateDirectory(_dirPath);
-
+            _dir.Create();
 
             // 打开文件
-            await using var fs = File.Create(_filePath); // 使用 File.Create 覆盖文件
+            await using var fs = _file.Create(); // 使用 Create 覆盖文件
 
             // 序列化并写入文件
 #pragma warning disable IL2026
@@ -51,7 +50,7 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
 
     public async Task LoadAsync()
     {
-        if (!File.Exists(_filePath))
+        if (!_file.Exists)
         {
             logger.LogDebug("数据文件不存在，无法加载数据");
             return;
@@ -60,12 +59,13 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
         try
         {
             // 打开文件
-            await using var fs = File.OpenRead(_filePath);
+            await using var fs = _file.OpenRead();
 
             // 读取并反序列化文件
 #pragma warning disable IL2026
 #pragma warning disable IL3050
-            if (await JsonSerializer.DeserializeAsync(fs, typeof(StorageContent), JsonSerializerOptions) is not StorageContent data)
+            if (await JsonSerializer.DeserializeAsync(fs, typeof(StorageContent), JsonSerializerOptions) is not StorageContent
+                data)
 #pragma warning restore IL3050
 #pragma warning restore IL2026
             {

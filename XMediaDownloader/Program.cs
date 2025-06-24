@@ -146,7 +146,7 @@ async Task AddHttpClient(IServiceCollection services, FileInfo cookieFile, Cance
 
     // 加载 Cookie
     var cookie = new CookieContainer();
-    var cookieString = await File.ReadAllTextAsync(cookieFile.Name, cancel);
+    var cookieString = await File.ReadAllTextAsync(cookieFile.FullName, cancel);
 
     services.AddSingleton(cookie);
 

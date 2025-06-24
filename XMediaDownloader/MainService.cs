@@ -96,12 +96,12 @@ public class MainService(
     {
         logger.LogInformation("参数:");
         logger.LogInformation("  目标用户: {User}", args.Username);
-        logger.LogInformation("  Cookie 文件: {CookieFile}", args.CookieFile.Name);
+        logger.LogInformation("  Cookie 文件: {CookieFile}", args.CookieFile.FullName);
         logger.LogInformation("  输出路径格式: {Dirname}", args.OutputPath);
         logger.LogInformation("  目标媒体类型: {DownloadType}", args.DownloadType.HasFlag(MediaType.All) ? "All" : args.DownloadType);
         logger.LogInformation("  无需获取信息: {OnlyDownloadInfo}", args.WithoutDownloadInfo);
         logger.LogInformation("  无需下载媒体: {OnlyDownloadMedia}", args.WithoutDownloadMedia);
-        logger.LogInformation("  状态存储目录: {StorageDir}", args.StorageDir);
+        logger.LogInformation("  状态存储目录: {StorageDir}", args.StorageDir.FullName);
         logger.LogInformation("  日志级别: {LogLevel}", args.LogLevel);
     }
 }
