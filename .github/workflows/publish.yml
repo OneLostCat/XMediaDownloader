@@ -18,10 +18,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0
-          # cache: true
           
       - name: Restore
-        run: dotnet restore XMediaDownloader # --locked-mode
+        run: dotnet restore XMediaDownloader
         
       - name: Build
         run: dotnet build XMediaDownloader --no-restore
