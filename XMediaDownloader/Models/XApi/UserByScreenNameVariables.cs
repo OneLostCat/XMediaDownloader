@@ -2,10 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace XMediaDownloader.Models.XApi;
 
-public record UserByScreenNameVariables
-{
-    public required string ScreenName { get; set; }
-}
+public record UserByScreenNameVariables(string ScreenName);
 
 // Json 序列化
 [JsonSerializable(typeof(UserByScreenNameVariables))]

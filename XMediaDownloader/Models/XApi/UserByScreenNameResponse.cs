@@ -2,31 +2,18 @@
 
 namespace XMediaDownloader.Models.XApi;
 
-public record UserByScreenNameResponse
-{
-    public required UserByScreenNameResponseUser User { get; set; }
-}
+public record UserByScreenNameResponse(UserByScreenNameResponseUser User);
 
-public record UserByScreenNameResponseUser
-{
-    public required UserByScreenNameResponseResult Result { get; set; }
-}
+public record UserByScreenNameResponseUser(UserByScreenNameResponseResult Result);
 
-public record UserByScreenNameResponseResult
-{
-    public required string Id { get; set; }
-    public required string RestId { get; set; }
-    public required UserByScreenNameResponseLegacy Legacy { get; set; }
-}
+public record UserByScreenNameResponseResult(string Id, string RestId, UserByScreenNameResponseLegacy Legacy);
 
-public record UserByScreenNameResponseLegacy
-{
-    public required string ScreenName { get; set; }
-    public required string Name { get; set; }
-    public required string Description { get; set; }
-    public required string CreatedAt { get; set; }
-    public required int MediaCount { get; set; }
-}
+public record UserByScreenNameResponseLegacy(
+    string ScreenName,
+    string Name,
+    string Description,
+    string CreatedAt,
+    int MediaCount);
 
 // Json 序列化
 [JsonSerializable(typeof(GraphQlResponse<UserByScreenNameResponse>))]

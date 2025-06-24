@@ -18,6 +18,7 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
     private const string UserMediaUrl = "BGmkmGDG0kZPM-aoQtNTTw/UserMedia";
 
     #region Features
+
     private const string UserByScreenNameFeatures =
         "{\"creator_subscriptions_tweet_preview_api_enabled\":true," +
         "\"hidden_profile_subscriptions_enabled\":true," +
@@ -31,6 +32,7 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         "\"subscriptions_verification_info_is_identity_verified_enabled\":true," +
         "\"subscriptions_verification_info_verified_since_enabled\":true," +
         "\"verified_phone_label_enabled\":false}";
+
     private const string UserMediaFeatures =
         "{\"profile_label_improvements_pcf_label_in_post_enabled\":false," +
         "\"rweb_tipjar_consumption_enabled\":true," +
@@ -60,15 +62,16 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         "\"longform_notetweets_rich_text_read_enabled\":true," +
         "\"longform_notetweets_inline_media_enabled\":true," +
         "\"responsive_web_enhance_cards_enabled\":false}";
+
     #endregion
-    
+
     private const string TimeFormat = "ddd MMM dd HH:mm:ss zzz yyyy";
 
     // 主要方法
     public async Task<User> GetUserByScreenNameAsync(string username, CancellationToken cancel)
     {
         // 参数
-        var variables = JsonSerializer.Serialize(new UserByScreenNameVariables { ScreenName = username },
+        var variables = JsonSerializer.Serialize(new UserByScreenNameVariables(username),
             UserByScreenNameVariablesContext.Default.UserByScreenNameVariables);
 
         // 发送请求
@@ -116,9 +119,9 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         {
             // 检查是否取消
             cancel.ThrowIfCancellationRequested();
-            
+
             // 获取媒体
-            var (newTweets, nextCursor) = await GetUserMediaAsync(userId, cursor, 20, cancel);
+            var (newTweets, nextCursor) = await GetUserMediaAsync(userId, cursor, cancel);
 
             // 如果没有更多媒体则退出
             if (newTweets.Count == 0) break;
@@ -127,10 +130,10 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
             {
                 // 合并帖子
                 var isNew = tweets.TryAdd(tweet.Id, tweet);
-                
+
                 // 增加帖子计数
                 if (isNew) tweetCount++;
-                
+
                 logger.LogInformation("获取信息 {CreationTime:yyyy-MM-dd HH:mm:ss zzz} {Id}", tweet.CreationTime, tweet.Id);
 
                 foreach (var media in tweet.Media)
@@ -153,10 +156,10 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         logger.LogInformation("信息获取完成: 成功获取 {TweetCount} 条帖子 / {MediaCount} 个媒体", tweetCount, mediaCount);
     }
 
-    private async Task<(List<Tweet>, string)> GetUserMediaAsync(string userId, string cursor, int count, CancellationToken cancel)
+    private async Task<(List<Tweet>, string)> GetUserMediaAsync(string userId, string cursor, CancellationToken cancel)
     {
         // 参数
-        var variables = JsonSerializer.Serialize(new UserMediaVariables { UserId = userId, Cursor = cursor, Count = count },
+        var variables = JsonSerializer.Serialize(new UserMediaVariables(userId, cursor),
             UserMediaVariablesContext.Default.UserMediaVariables);
 
         // 发送请求
@@ -171,37 +174,22 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
 
         // 获取帖子
         var newTweets = new List<Tweet>();
-        var nextCursor = cursor;
+        var nextCursor = "";
 
         foreach (var instruction in content.Data.User.Result.TimelineV2.Timeline.Instructions)
         {
-            if (instruction.Type == "TimelineAddEntries")
+            switch (instruction.Type)
             {
-                foreach (var entry in instruction.Entries)
-                {
-                    if (entry.EntryId.StartsWith("profile-"))
-                    {
-                        var tweet = ProcessTweets(entry);
+                case "TimelineAddEntries":
+                    var result = ProcessTimelineAddEntries(instruction);
 
-                        if (tweet.Count != 0)
-                        {
-                            newTweets.AddRange(tweet);
-                        }
-                    }
-                    else if (entry.EntryId.StartsWith("cursor-bottom-"))
-                    {
-                        nextCursor = entry.Content.Value ?? throw new Exception("无法获取下一个指针"); // 无法判断是否会为空
-                    }
-                }
-            }
-            else if (instruction.Type == "TimelineAddToModule")
-            {
-                newTweets.AddRange(instruction.ModuleItems
-                        .Where(entry => entry.EntryId.StartsWith("profile-"))
-                        .Select(ProcessTweet)
-                    // .Where(x => x != null)
-                    // .OfType<Tweet>()
-                );
+                    newTweets.AddRange(result.tweets);
+                    nextCursor = result.cursor;
+
+                    break;
+                case "TimelineAddToModule":
+                    newTweets.AddRange(ProcessTimelineAddToModule(instruction));
+                    break;
             }
         }
 
@@ -209,7 +197,37 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
     }
 
     // 工具方法
-    private static List<Tweet> ProcessTweets(TimelineEntry entry)
+    private static (List<Tweet> tweets, string cursor) ProcessTimelineAddEntries(UserMediaResponseInstruction instruction)
+    {
+        var tweets = new List<Tweet>();
+        var cursor = "";
+
+        foreach (var entry in instruction.Entries)
+        {
+            if (entry.EntryId.StartsWith("profile-"))
+            {
+                var tweet = ProcessTweets(entry);
+
+                if (tweet.Count != 0)
+                {
+                    tweets.AddRange(tweet);
+                }
+            }
+            else if (entry.EntryId.StartsWith("cursor-bottom-"))
+            {
+                cursor = entry.Content.Value ?? throw new Exception("无法获取下一个指针"); // 无法判断是否会为空
+            }
+        }
+
+        return (tweets, cursor);
+    }
+
+    private static IEnumerable<Tweet> ProcessTimelineAddToModule(UserMediaResponseInstruction instruction) => instruction
+        .ModuleItems
+        .Where(entry => entry.EntryId.StartsWith("profile-"))
+        .Select(ProcessTweet);
+
+    private static List<Tweet> ProcessTweets(UserMediaResponseEntry entry)
     {
         var tweets = new List<Tweet>();
 
@@ -217,18 +235,11 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
 
         foreach (var item in entry.Content.Items)
         {
-            // if (item.Item.ItemContent.TweetResults.Result == null) continue;
-
             var tweetResult = item.Item.ItemContent.TweetResults.Result;
-
-            // if (tweetResult.Tombstone != null) continue;
 
             var userInfo = tweetResult.Core.UserResults.Result;
 
             if (userInfo.RestId == null) throw new Exception("无法获取用户 ID"); // 无法判断是否会为空
-
-            // 储存用户信息
-            // storage.Content.Users[userInfo.RestId] = GetUserInfo(userInfo);
 
             var tweet = new Tweet
             {
@@ -246,18 +257,13 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         return tweets;
     }
 
-    private static Tweet ProcessTweet(ItemMedia entry)
+    private static Tweet ProcessTweet(UserMediaResponseItem entry)
     {
         var tweetResult = entry.Item.ItemContent.TweetResults.Result;
-
-        // if (tweetResult == null) return null;
 
         var userInfo = tweetResult.Core.UserResults.Result;
 
         if (userInfo.RestId == null) throw new Exception("无法获取用户 ID"); // 无法判断是否会为空
-
-        // 储存用户信息
-        // storage.Content.Users[userInfo.RestId] = GetUserInfo(userInfo);
 
         return new Tweet
         {
@@ -270,23 +276,20 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
         };
     }
 
-    private static List<Media> ProcessMedia(List<MediaEntity> mediaEntities)
-    {
-        // if (mediaEntities.Count == 0) return [];
-
-        return mediaEntities.Select(x => new Media
-        {
-            Type = x.Type switch
+    private static List<Media> ProcessMedia(List<UserMediaResponseMedia> mediaEntities) =>
+        mediaEntities.Select(x => new Media
             {
-                "photo" => MediaType.Image,
-                "video" => MediaType.Video,
-                "animated_gif" => MediaType.Gif,
-                _ => throw new ArgumentException("未知媒体类型", x.Type)
-            },
-            Url = x.MediaUrlHttps,
-            Video = x.VideoInfo?.Variants.Select(y => new Video { Url = y.Url, Bitrate = y.Bitrate }).ToList() ?? []
-        }).ToList();
-    }
+                Type = x.Type switch
+                {
+                    "photo" => MediaType.Image,
+                    "video" => MediaType.Video,
+                    "animated_gif" => MediaType.Gif,
+                    _ => throw new ArgumentException("未知媒体类型", x.Type)
+                },
+                Url = x.MediaUrlHttps,
+                Video = x.VideoInfo?.Variants.Select(y => new Video { Url = y.Url, Bitrate = y.Bitrate }).ToList() ?? []
+            }
+        ).ToList();
 
     private static string BuildUrl(string endpoint, string variables, string? features = null, string? fieldToggles = null)
     {
@@ -304,14 +307,4 @@ public class XApiService(ILogger<XApiService> logger, StorageService storage, [F
 
         return sb.ToString();
     }
-
-    // private static User GetUserInfo(MediaUserResult user) => new()
-    // {
-    //     Id = user.RestId ?? throw new Exception("用户 ID 不能为空"), // 无法判断是否会为空
-    //     Username = user.Legacy.ScreenName ?? throw new Exception("用户名不能为空"), // 无法判断是否会为空
-    //     Name = user.Legacy.Name,
-    //     Description = user.Legacy.Description != null ? Regex.Unescape(user.Legacy.Description) : null, // Regex.Unescape 移除转义
-    //     CreationTime = DateTimeOffset.UtcNow,
-    //     MediaCount = 0 // TODO
-    // };
 }
