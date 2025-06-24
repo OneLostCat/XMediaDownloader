@@ -85,7 +85,7 @@ public class MainService(
         logger.LogInformation("  名称: {Name}", user.Name);
         logger.LogInformation("  昵称: {Nickname}", user.Nickname);
         logger.LogInformation("  描述: {Description}", user.Description);
-        logger.LogInformation("  注册时间: {CreationTime}", user.CreationTime.ToString("yyyy-MM-dd HH:mm:ss zzz"));
+        logger.LogInformation("  注册时间: {CreationTime:yyyy-MM-dd HH:mm:ss zzz}", user.CreationTime);
         logger.LogInformation("  媒体数量: {MediaCount}", user.MediaCount);
 
         return user;
