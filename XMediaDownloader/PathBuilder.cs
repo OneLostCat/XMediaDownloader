@@ -20,10 +20,8 @@ public static class PathBuilder
         { "MediaIndex", "10" },
         { "MediaType", "11" },
         // { "MediaUrl", "12" },
-        { "VideoIndex", "13" },
-        // { "VideoUrl", "14" },
-        { "VideoBitrate", "15" },
-        { "Extension", "16" },
+        { "MediaExtension", "13" },
+        { "MediaBitrate", "14" },
         // 设置默认时间格式
         { "{4}", "{4:yyyy-MM-dd_HH-mm-ss}" },
         { "{7}", "{7:yyyy-MM-dd_HH-mm-ss}" }
@@ -44,10 +42,8 @@ public static class PathBuilder
         int? mediaIndex,
         MediaType? mediaType,
         string? mediaUrl,
-        int? videoIndex,
-        string? videoUrl,
-        int? videoBitrate,
-        string? extension)
+        string? mediaExtension,
+        int? mediaBitrate)
     {
         var sb = new StringBuilder(format);
 
@@ -70,10 +66,8 @@ public static class PathBuilder
             mediaIndex,
             mediaType,
             mediaUrl,
-            videoIndex,
-            videoUrl,
-            videoBitrate,
-            extension
+            mediaExtension,
+            mediaBitrate
         );
     }
 }

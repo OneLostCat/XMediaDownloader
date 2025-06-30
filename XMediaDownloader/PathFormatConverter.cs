@@ -79,8 +79,8 @@ public static partial class PathFormatConverter
                 var mediaType = groups["MediaType"].Value switch
                 {
                     "img" => MediaType.Image,
-                    "gif" => MediaType.Gif,
                     "vid" => MediaType.Video,
+                    "gif" => MediaType.Gif,
                     _ => throw new ArgumentException("无法识别的媒体类型", groups["MediaType"].Value)
                 };
 
@@ -104,10 +104,8 @@ public static partial class PathFormatConverter
                         mediaIndex,
                         mediaType,
                         null,
-                        null,
-                        null,
-                        null,
-                        extension
+                        extension,
+                        null
                     )
                 );
 

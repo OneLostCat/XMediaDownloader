@@ -24,7 +24,7 @@ var outputPathFormatOption = new Option<string>("-O", "--output-path-format")
 {
     Description = "输出文件路径格式",
     DefaultValueFactory = _ =>
-        $"{{Username}}{Path.DirectorySeparatorChar}{{Username}}-{{TweetCreationTime}}-{{TweetId}}-{{MediaIndex}}-{{MediaType}}.{{Extension}}"
+        $"{{Username}}{Path.DirectorySeparatorChar}{{Username}}-{{TweetCreationTime}}-{{TweetId}}-{{MediaIndex}}-{{MediaType}}{{MediaExtension}}"
 };
 
 var downloadTypeOption = new Option<List<MediaType>>("-t", "--download-type")

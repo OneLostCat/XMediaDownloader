@@ -37,110 +37,100 @@ public class DownloadService(
                 // 检查是否取消
                 cancel.ThrowIfCancellationRequested();
 
-                var media = tweet.Media[i];
-
                 // 增加媒体计数
                 mediaCount++;
 
-                // 获取 Url 和扩展名
-                string url;
-                string extension;
-                int? videoIndex = null;
-                Video? video = null;
+                var media = tweet.Media[i];
+                var downloads = new List<DownloadItem>();
 
-                if (media.Type != MediaType.Video) // 图片或动图
-                {
-                    // 获取原图 Url
-                    var index = media.Url.LastIndexOf('.'); // 获取最后一个 "." 的位置
+                // 获取图片 (包括视频和 GIF 的封面)
+                var index = media.Url.LastIndexOf('.'); // 获取最后一个 "." 的位置
 
-                    if (index == -1) throw new ArgumentException("无法获取原始图片 Url", media.Url);
+                if (index == -1) throw new ArgumentException("无法获取原始图片 Url", media.Url);
 
-                    var baseUrl = media.Url[..index]; // 获取基础 Url
-                    extension = media.Url[(index + 1)..]; // 获取扩展名
+                var format = media.Url[(index + 1)..];
 
-                    url = $"{baseUrl}?format={extension}&name=orig";
-                }
-                else // 视频
-                {
-                    // 获取最高质量视频索引
-                    videoIndex = media.Video
-                        .Index()
-                        .Where(x => x.Item.Bitrate != null)
-                        .OrderByDescending(x => x.Item.Bitrate)
-                        .First()
-                        .Index;
-
-                    // 获取视频
-                    video = media.Video[(int)videoIndex];
-
-                    // 获取视频 Url
-                    url = video.Url;
-
-                    // 获取拓展名
-                    extension = new Uri(url).Segments.Last().Split('.').Last();
-                }
+                downloads.Add(new DownloadItem($"{media.Url[..index]}?format={format}&name=orig", $".{format}"));
 
                 // 检查下载类型
                 if (!args.DownloadType.HasFlag(media.Type))
                 {
-                    logger.LogInformation("  {Type} {Url} 跳过 ({mediaCount} / {totalMediaCount})", media.Type, url, mediaCount,
-                        totalMediaCount);
+                    logger.LogInformation("  {Type} {Url} 跳过 ({mediaCount} / {totalMediaCount})", media.Type,
+                        downloads.First().Url, mediaCount, totalMediaCount);
                     continue;
                 }
-
-                // 获取文件信息
-                var file = new FileInfo(Path.Combine(
-                    args.OutputDir.ToString() != "." ? args.OutputDir.ToString() : "", // 避免使用默认目录时输出多余的 ".\"
-                    PathBuilder.Build(
-                        args.OutputPathFormat,
-                        user.Id,
-                        user.Name,
-                        user.Nickname,
-                        user.Description,
-                        user.CreationTime,
-                        user.MediaCount,
-                        tweet.Id,
-                        tweet.CreationTime,
-                        tweet.Text,
-                        tweet.Hashtags,
-                        i + 1,
-                        media.Type,
-                        media.Url,
-                        videoIndex,
-                        video?.Url,
-                        video?.Bitrate,
-                        extension
-                    )
-                ));
-
-                // 检查文件是否存在
-                if (file.Exists)
+                
+                // 获取视频和 GIF
+                if (media.Type != MediaType.Image)
                 {
-                    logger.LogInformation("  {Type} {Url} 文件已存在 {FilePath} ({mediaCount} / {totalMediaCount})", media.Type, url,
-                        file, mediaCount, totalMediaCount);
-                    continue;
+                    // 获取最高质量视频
+                    var video = media.Video
+                        .OrderByDescending(x => x.Bitrate)
+                        .First();
+
+                    downloads.Add(new DownloadItem(video.Url, Path.GetExtension(new Uri(video.Url).Segments.Last()),
+                        video.Bitrate));
                 }
 
-                logger.LogInformation("  {Type} {Url} -> {FilePath} ({mediaCount} / {totalMediaCount})", media.Type, url, file,
-                    mediaCount, totalMediaCount);
+                // 下载所有文件
+                var downloaded = false;
+
+                foreach (var item in downloads)
+                {
+                    // 获取文件
+                    var file = new FileInfo(Path.Combine(
+                        args.OutputDir.ToString() != "." ? args.OutputDir.ToString() : "", // 避免使用默认目录时输出多余的 ".\"
+                        PathBuilder.Build(
+                            args.OutputPathFormat,
+                            user.Id,
+                            user.Name,
+                            user.Nickname,
+                            user.Description,
+                            user.CreationTime,
+                            user.MediaCount,
+                            tweet.Id,
+                            tweet.CreationTime,
+                            tweet.Text,
+                            tweet.Hashtags,
+                            i + 1,
+                            media.Type,
+                            item.Url,
+                            item.Extension,
+                            item.Bitrate
+                        )
+                    ));
+
+                    // 检查文件是否存在
+                    if (file.Exists)
+                    {
+                        logger.LogInformation("  {Type} {Url} 文件已存在 {FilePath} ({mediaCount} / {totalMediaCount})", media.Type,
+                            item.Url, file, mediaCount, totalMediaCount);
+                        continue;
+                    }
+
+                    logger.LogInformation("  {Type} {Url} -> {FilePath} ({mediaCount} / {totalMediaCount})", media.Type, item.Url,
+                        file, mediaCount, totalMediaCount);
+
+                    downloaded = true;
+
+                    // 发送请求
+                    var response = await httpClient.GetAsync(item.Url, cancel);
+
+                    // 创建文件夹
+                    file.Directory?.Create(); // 无法判断是否为空
+
+                    // 写入临时文件
+                    var tempFile = new FileInfo(Path.GetTempFileName());
+                    
+                    await using (var fs = tempFile.Create())
+                        await response.Content.CopyToAsync(fs, CancellationToken.None); // 不传递取消令牌，避免下载操作只执行一半
+
+                    // 移动文件
+                    tempFile.MoveTo(file.FullName);
+                }
 
                 // 增加下载计数
-                downloadCount++;
-
-                // 发送请求
-                var response = await httpClient.GetAsync(url, cancel);
-
-                // 创建文件夹
-                file.Directory?.Create(); // 无法判断是否为空
-
-                // 写入临时文件
-                var tempFile = new FileInfo(Path.GetTempFileName());
-
-                await using (var fs = tempFile.Create())
-                    await response.Content.CopyToAsync(fs, CancellationToken.None); // 不传递取消令牌，避免下载操作只执行一半
-
-                // 移动文件
-                tempFile.MoveTo(file.FullName);
+                if (downloaded) downloadCount++;
             }
         }
 
