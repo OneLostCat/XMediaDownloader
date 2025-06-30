@@ -57,9 +57,10 @@ public class DownloadService(
                 {
                     logger.LogInformation("  {Type} {Url} 跳过 ({mediaCount} / {totalMediaCount})", media.Type,
                         downloads.First().Url, mediaCount, totalMediaCount);
+                    
                     continue;
                 }
-                
+
                 // 获取视频和 GIF
                 if (media.Type != MediaType.Image)
                 {
@@ -121,7 +122,7 @@ public class DownloadService(
 
                     // 写入临时文件
                     var tempFile = new FileInfo(Path.GetTempFileName());
-                    
+
                     await using (var fs = tempFile.Create())
                         await response.Content.CopyToAsync(fs, CancellationToken.None); // 不传递取消令牌，避免下载操作只执行一半
 
