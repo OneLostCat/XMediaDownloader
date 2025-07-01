@@ -85,7 +85,7 @@ public static partial class PathFormatConverter
                     _ => throw new ArgumentException("无法识别的媒体类型", groups["MediaType"].Value)
                 };
 
-                var extension = groups["Extension"].Value;
+                var extension = $".{groups["Extension"].Value}";
 
                 // 生成文件路径
                 var outputPath = PathBuilder.Build(

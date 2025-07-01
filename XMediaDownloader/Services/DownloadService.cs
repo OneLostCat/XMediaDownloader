@@ -16,7 +16,6 @@ public class DownloadService(
         var tweets = storage.Content.Users[userId].Tweets;
 
         var totalMediaCount = tweets.Select(x => x.Value.Media.Count).Sum(); // 总媒体数量
-        var tweetCount = 0; // 当前帖子数量
         var mediaCount = 0; // 当前媒体数量
         var downloadCount = 0; // 下载媒体数量
 
@@ -26,9 +25,6 @@ public class DownloadService(
         foreach (var tweet in tweets.Select(x => x.Value))
         {
             logger.LogInformation("下载媒体 {CreationTime:yyyy-MM-dd HH:mm:ss zzz} {Id}", tweet.CreationTime, tweet.Id);
-
-            // 增加帖子计数
-            tweetCount++;
 
             // 遍历媒体
             for (var i = 0; i < tweet.Media.Count; i++)
