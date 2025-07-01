@@ -56,7 +56,7 @@ public class DownloadService(
                 {
                     logger.LogInformation("  {Type} {Url} 跳过 ({mediaCount} / {totalMediaCount})", media.Type,
                         downloads.First().Url, mediaCount, totalMediaCount);
-                    
+
                     continue;
                 }
 
@@ -78,39 +78,39 @@ public class DownloadService(
                 foreach (var item in downloads)
                 {
                     // 获取文件
-                    var file = new FileInfo(Path.Combine(
-                        args.OutputDir.ToString() != "." ? args.OutputDir.ToString() : "", // 避免使用默认目录时输出多余的 ".\"
-                        PathBuilder.Build(
-                            args.OutputPathFormat,
-                            user.Id,
-                            user.Name,
-                            user.Nickname,
-                            user.Description,
-                            user.CreationTime,
-                            user.MediaCount,
-                            tweet.Id,
-                            tweet.CreationTime,
-                            tweet.Text,
-                            tweet.Hashtags,
-                            i + 1,
-                            media.Type,
-                            item.Url,
-                            item.Extension,
-                            item.Bitrate
-                        )
-                    ));
+                    var filePath = PathBuilder.Build(
+                        args.OutputPathFormat,
+                        user.Id,
+                        user.Name,
+                        user.Nickname,
+                        user.Description,
+                        user.CreationTime,
+                        user.MediaCount,
+                        tweet.Id,
+                        tweet.CreationTime,
+                        tweet.Text,
+                        tweet.Hashtags,
+                        i + 1,
+                        media.Type,
+                        item.Url,
+                        item.Extension,
+                        item.Bitrate
+                    );
+
+                    var file = new FileInfo(Path.Combine(args.OutputDir, filePath));
 
                     // 检查文件是否存在
                     if (file.Exists)
                     {
                         logger.LogInformation("  {Type} {Url} 文件已存在 {FilePath} ({mediaCount} / {totalMediaCount})", media.Type,
-                            item.Url, file, mediaCount, totalMediaCount);
+                            item.Url, filePath, mediaCount, totalMediaCount);
+                        
                         continue;
                     }
 
                     logger.LogInformation("  {Type} {Url} -> {FilePath} ({mediaCount} / {totalMediaCount})", media.Type, item.Url,
-                        file, mediaCount, totalMediaCount);
-
+                        filePath, mediaCount, totalMediaCount);
+                    
                     downloaded = true;
 
                     // 发送请求

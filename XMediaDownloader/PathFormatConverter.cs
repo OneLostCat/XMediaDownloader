@@ -15,11 +15,11 @@ public static partial class PathFormatConverter
         var outputDir = result.GetRequiredValue(CommandLine.OutputDirOption);
         var outputPathFormat = result.GetRequiredValue(CommandLine.OutputPathFormatOption);
         var dryRun = result.GetRequiredValue(CommandLine.DryRunOption);
-        // var workDir = result.GetRequiredValue(CommandLine.WorkDirOption);
+        var workDir = result.GetRequiredValue(CommandLine.WorkDirOption);
         var logLevel = result.GetRequiredValue(CommandLine.LogLevelOption);
 
         // 设置工作目录
-        // Environment.CurrentDirectory = workDir.FullName;
+        Environment.CurrentDirectory = workDir;
 
         // 日志
         await using var logger = new LoggerConfiguration()
@@ -37,32 +37,32 @@ public static partial class PathFormatConverter
         logger.Information("  输出目录: {OutputDir}", outputDir);
         logger.Information("  输出路径格式: {OutputPathFormat}", outputPathFormat);
         logger.Information("  空运行: {DryRun}", dryRun);
-        // logger.Information("  工作目录: {WorkDir}", workDir);
+        logger.Information("  工作目录: {WorkDir}", workDir);
         logger.Information("  日志级别: {LogLevel}", logLevel);
 
         // 转换
         logger.Information("开始转换");
 
-        foreach (var source in sourceDir.EnumerateFiles("*", SearchOption.AllDirectories))
+        try
         {
-            // 检查是否取消
-            cancel.ThrowIfCancellationRequested();
-
-            // 获取文件路径
-            var sourcePath = Path.GetRelativePath(sourceDir.FullName, source.FullName);
-
-            // 匹配文件名
-            var match = OriginPathRegex().Match(source.Name);
-
-            if (!match.Success)
+            foreach (var sourceFullPath in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
             {
-                logger.Warning("文件名无效 {SourcePath}", sourcePath);
-                
-                continue;
-            }
+                // 检查是否取消
+                cancel.ThrowIfCancellationRequested();
 
-            try
-            {
+                // 获取文件
+                var source = new FileInfo(sourceFullPath);
+                var sourcePath = Path.GetRelativePath(sourceDir, sourceFullPath);
+
+                // 匹配文件名
+                var match = OriginPathRegex().Match(source.Name);
+
+                if (!match.Success)
+                {
+                    logger.Warning("文件名无效 {SourcePath}", sourcePath);
+                    continue;
+                }
+
                 // 获取信息
                 var groups = match.Groups;
 
@@ -88,47 +88,46 @@ public static partial class PathFormatConverter
                 var extension = groups["Extension"].Value;
 
                 // 生成文件路径
-                var outputPath = Path.Combine(
-                    outputDir.ToString() != "." ? outputDir.ToString() : "", // 避免使用默认目录时输出多余的 ".\"
-                    PathBuilder.Build(
-                        outputPathFormat,
-                        null,
-                        username,
-                        null,
-                        null,
-                        null,
-                        null,
-                        tweetId,
-                        tweetCreationTime,
-                        null,
-                        [],
-                        mediaIndex,
-                        mediaType,
-                        null,
-                        extension,
-                        null
-                    )
+                var outputPath = PathBuilder.Build(
+                    outputPathFormat,
+                    null,
+                    username,
+                    null,
+                    null,
+                    null,
+                    null,
+                    tweetId,
+                    tweetCreationTime,
+                    null,
+                    [],
+                    mediaIndex,
+                    mediaType,
+                    null,
+                    extension,
+                    null
                 );
 
+                var output = new FileInfo(Path.Combine(outputDir, outputPath));
+
                 // 创建目录
-                Directory.GetParent(outputPath)?.Create();
+                output.Directory?.Create();
 
                 // 移动文件
                 logger.Information("移动 {SourcePath} -> {OutputPath}", sourcePath, outputPath);
 
-                if (!dryRun) source.MoveTo(outputPath);
+                if (!dryRun) source.MoveTo(output.FullName);
             }
-            catch (OperationCanceledException)
-            {
-                logger.Information("操作取消");
-            }
-            catch (Exception exception)
-            {
-                logger.Error(exception, "错误");
-            }
-        }
 
-        logger.Information("转换完成");
+            logger.Information("转换完成");
+        }
+        catch (OperationCanceledException)
+        {
+            logger.Information("操作取消");
+        }
+        catch (Exception exception)
+        {
+            logger.Error(exception, "错误");
+        }
     }
 
     [GeneratedRegex(

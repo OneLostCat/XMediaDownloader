@@ -23,11 +23,11 @@ public static class Downloader
         var downloadType = result.GetRequiredValue(CommandLine.DownloadTypeOption).Aggregate((a, b) => a | b); // 合并
         var withoutDownloadMedia = result.GetRequiredValue(CommandLine.WithoutDownloadMediaOption);
         var storageDir = result.GetRequiredValue(CommandLine.StorageDirOption);
-        // var workDir = result.GetRequiredValue(CommandLine.WorkDirOption);
+        var workDir = result.GetRequiredValue(CommandLine.WorkDirOption);
         var logLevel = result.GetRequiredValue(CommandLine.LogLevelOption);
 
         // 设置工作目录
-        // Environment.CurrentDirectory = workDir.Name;
+        Environment.CurrentDirectory = workDir;
 
         // 日志
         await using var logger = new LoggerConfiguration()
@@ -52,11 +52,11 @@ public static class Downloader
 
             // 服务
             builder.Services.AddSerilog();
+            await builder.Services.AddHttpClientAsync(cookieFile, cancel);
             builder.Services.AddSingleton<XApiService>();
             builder.Services.AddSingleton<StorageService>();
             builder.Services.AddSingleton<DownloadService>();
             builder.Services.AddHostedService<MainService>();
-            await builder.Services.AddHttpClientAsync(cookieFile, cancel);
 
             // 命令行参数
             builder.Services.AddSingleton(new CommandLineArguments(
@@ -67,8 +67,8 @@ public static class Downloader
                 downloadType,
                 withoutDownloadInfo,
                 withoutDownloadMedia,
-                storageDir,
-                // workDir,
+                storageDir, 
+                workDir,
                 logLevel
             ));
 
@@ -83,7 +83,7 @@ public static class Downloader
         logger.Debug("应用退出");
     }
 
-    private static async Task AddHttpClientAsync(this IServiceCollection services, FileInfo cookieFile, CancellationToken cancel)
+    private static async Task AddHttpClientAsync(this IServiceCollection services, string cookieFile, CancellationToken cancel)
     {
         var baseUrl = new Uri(XApiService.BaseUrl);
         const string userAgent =
@@ -91,7 +91,7 @@ public static class Downloader
 
         // 加载 Cookie
         var cookie = new CookieContainer();
-        var cookieString = await File.ReadAllTextAsync(cookieFile.FullName, cancel);
+        var cookieString = await File.ReadAllTextAsync(cookieFile, cancel);
 
         services.AddSingleton(cookie);
 

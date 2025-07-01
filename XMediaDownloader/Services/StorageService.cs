@@ -14,11 +14,8 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = true
     };
-
-
-
-    private readonly DirectoryInfo _dir = args.StorageDir;
-    private readonly FileInfo _file = new(Path.Combine(args.StorageDir.FullName, "storage.json"));
+    
+    private readonly FileInfo _file = new(Path.Combine(args.StorageDir, "storage.json"));
 
     // 公开成员
     public StorageContent Content { get; private set; } = new();
@@ -31,7 +28,7 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
         try
         {
             // 创建目录
-            _dir.Create();
+            Directory.CreateDirectory(args.StorageDir);
 
             // 打开文件
             await using var fs = _file.Create(); // 使用 Create 覆盖文件
@@ -77,8 +74,9 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
                 pair.Value.Tweets = new SortedDictionary<string, Tweet>(pair.Value.Tweets, StorageContent.IdComparer);
             }
 
-            logger.LogDebug("数据加载成功");
             Content = data;
+            
+            logger.LogDebug("数据加载成功");
         }
         catch (Exception exception)
         {

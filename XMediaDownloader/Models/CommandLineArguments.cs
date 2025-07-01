@@ -4,13 +4,13 @@ namespace XMediaDownloader.Models;
 
 public record CommandLineArguments(
     string Username,
-    FileInfo CookieFile,
-    DirectoryInfo OutputDir,
+    string CookieFile,
+    string OutputDir,
     string OutputPathFormat,
     MediaType DownloadType,
     bool WithoutDownloadInfo,
     bool WithoutDownloadMedia,
-    DirectoryInfo StorageDir,
-    // DirectoryInfo WorkDir,
+    string StorageDir,
+    string WorkDir,
     LogEventLevel LogLevel
 );

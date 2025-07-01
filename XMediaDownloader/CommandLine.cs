@@ -10,15 +10,15 @@ public static class CommandLine
     public static readonly Option<string> UsernameOption = new("-u", "--username")
         { Description = "目标用户", Required = true };
 
-    public static readonly Option<FileInfo> CookieFileOption = new("-c", "--cookie-file")
+    public static readonly Option<string> CookieFileOption = new("-c", "--cookie-file")
         { Description = "用于请求 API 的 Cookie 文件", Required = true };
 
     public static readonly Option<bool> WithoutDownloadInfoOption = new("--without-download-info")
         { Description = "无需获取信息", DefaultValueFactory = _ => false };
 
     // 输出选项
-    public static readonly Option<DirectoryInfo> OutputDirOption = new("-o", "--output-dir")
-        { Description = "输出目录", DefaultValueFactory = _ => new DirectoryInfo(".") };
+    public static readonly Option<string> OutputDirOption = new("-o", "--output-dir")
+        { Description = "输出目录", DefaultValueFactory = _ => "." };
 
     public static readonly Option<string> OutputPathFormatOption = new("-O", "--output-path-format")
     {
@@ -40,17 +40,17 @@ public static class CommandLine
         { Description = "无需下载媒体", DefaultValueFactory = _ => false };
 
     // 其他选项
-    public static readonly Option<DirectoryInfo> StorageDirOption = new("-s", "--storage-dir")
-        { Description = "状态存储目录", DefaultValueFactory = _ => new DirectoryInfo(".") };
-
-    // public static Option<DirectoryInfo> WorkDirOption = new("-w", "--work-dir")
-    //     { Description = "工作目录", DefaultValueFactory = _ => new DirectoryInfo(".") };
+    public static readonly Option<string> WorkDirOption = new("-w", "--work-dir")
+        { Description = "工作目录", DefaultValueFactory = _ => "." };
+    
+    public static readonly Option<string> StorageDirOption = new("-s", "--storage-dir")
+        { Description = "状态存储目录", DefaultValueFactory = _ => "." };
 
     public static readonly Option<LogEventLevel> LogLevelOption = new("-l", "--log-level")
         { Description = "日志级别", DefaultValueFactory = _ => LogEventLevel.Information };
 
     // 路径格式转换选项
-    public static readonly Option<DirectoryInfo> SourceDirOption = new("-s", "--source-dir")
+    public static readonly Option<string> SourceDirOption = new("-s", "--source-dir")
         { Description = "源目录", Required = true };
 
     public static readonly Option<bool> DryRunOption = new("-n", "--dry-run")
@@ -67,7 +67,7 @@ public static class CommandLine
             OutputDirOption,
             OutputPathFormatOption,
             DryRunOption,
-            // WorkDirOption,
+            WorkDirOption,
             LogLevelOption,
         };
 
@@ -84,7 +84,7 @@ public static class CommandLine
             DownloadTypeOption,
             WithoutDownloadMediaOption,
             StorageDirOption,
-            // WorkDirOption,
+            WorkDirOption,
             LogLevelOption,
             convertCommand
         };

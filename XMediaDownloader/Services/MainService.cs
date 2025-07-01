@@ -54,8 +54,6 @@ public class MainService(
 
     private async Task<User> GetUserAsync(CancellationToken cancel)
     {
-        logger.LogInformation("用户信息:");
-
         User user;
 
         if (!args.WithoutDownloadInfo)
@@ -80,7 +78,8 @@ public class MainService(
             // 从存储中获取用户信息
             user = storage.Content.Users.Select(x => x.Value.Info).First(x => x.Name == args.Username);
         }
-
+        
+        logger.LogInformation("用户信息:");
         logger.LogInformation("  ID: {Id}", user.Id);
         logger.LogInformation("  名称: {Name}", user.Name);
         logger.LogInformation("  昵称: {Nickname}", user.Nickname);
@@ -103,7 +102,7 @@ public class MainService(
         logger.LogInformation("  无需获取信息: {OnlyDownloadInfo}", args.WithoutDownloadInfo);
         logger.LogInformation("  无需下载媒体: {OnlyDownloadMedia}", args.WithoutDownloadMedia);
         logger.LogInformation("  状态存储目录: {StorageDir}", args.StorageDir);
-        // logger.LogInformation("  工作目录: {WorkDir}", args.WorkDir);
+        logger.LogInformation("  工作目录: {WorkDir}", args.WorkDir);
         logger.LogInformation("  日志级别: {LogLevel}", args.LogLevel);
     }
 }
