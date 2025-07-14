@@ -23,8 +23,7 @@ public static class CommandLine
     public static readonly Option<string> OutputPathFormatOption = new("-O", "--output-path-format")
     {
         Description = "输出文件路径格式",
-        DefaultValueFactory = _ =>
-            $"{{Username}}{Path.DirectorySeparatorChar}{{Username}}-{{TweetCreationTime}}-{{TweetId}}-{{MediaIndex}}-{{MediaType}}{{MediaExtension}}"
+        DefaultValueFactory = _ => "{TweetId}-{Username}-{TweetCreationTime}-{MediaIndex}-{MediaType}{MediaExtension}"
     };
 
     // 下载选项
@@ -42,9 +41,6 @@ public static class CommandLine
     // 其他选项
     public static readonly Option<string> WorkDirOption = new("-w", "--work-dir")
         { Description = "工作目录", DefaultValueFactory = _ => "." };
-    
-    public static readonly Option<string> StorageDirOption = new("-s", "--storage-dir")
-        { Description = "状态存储目录", DefaultValueFactory = _ => "." };
 
     public static readonly Option<LogEventLevel> LogLevelOption = new("-l", "--log-level")
         { Description = "日志级别", DefaultValueFactory = _ => LogEventLevel.Information };
@@ -83,13 +79,12 @@ public static class CommandLine
             OutputPathFormatOption,
             DownloadTypeOption,
             WithoutDownloadMediaOption,
-            StorageDirOption,
             WorkDirOption,
             LogLevelOption,
             convertCommand
         };
 
-        command.SetAction(Downloader.Run);
+        command.SetAction(Downloader.RunAsync);
 
         // 运行
         return await command.Parse(args).InvokeAsync();

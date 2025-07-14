@@ -10,21 +10,20 @@ public class DownloadService(
     StorageService storage,
     [FromKeyedServices("Download")] HttpClient httpClient)
 {
-    public async Task DownloadMediaAsync(string userId, CancellationToken cancel)
+    public async Task DownloadMediaAsync(CancellationToken cancel)
     {
-        var user = storage.Content.Users[userId].Info;
-        var tweets = storage.Content.Users[userId].Tweets;
-
-        var totalMediaCount = tweets.Select(x => x.Value.Media.Count).Sum(); // 总媒体数量
+        var totalMediaCount = storage.Content.Tweets.Select(x => x.Value.Media.Count).Sum(); // 总媒体数量
         var mediaCount = 0; // 当前媒体数量
         var downloadCount = 0; // 下载媒体数量
 
         logger.LogInformation("开始下载媒体");
 
         // 遍历帖子
-        foreach (var tweet in tweets.Select(x => x.Value))
+        foreach (var tweet in storage.Content.Tweets.Select(x => x.Value))
         {
-            logger.LogInformation("下载媒体 {CreationTime:yyyy-MM-dd HH:mm:ss zzz} {Id}", tweet.CreationTime, tweet.Id);
+            var user = storage.Content.Users[tweet.UserId];
+            
+            logger.LogInformation("下载媒体 {Id} {Username} {CreationTime:yyyy-MM-dd HH:mm:ss}", tweet.Id, user.Name, tweet.CreationTime.LocalDateTime);
 
             // 遍历媒体
             for (var i = 0; i < tweet.Media.Count; i++)

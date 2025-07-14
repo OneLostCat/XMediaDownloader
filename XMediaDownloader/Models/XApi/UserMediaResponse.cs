@@ -86,7 +86,17 @@ public record UserMediaResponseUserResults
 
 public record UserMediaResponseUserResult
 {
-    [JsonPropertyName("rest_id")] public string? RestId { get; set; } // 可能为空
+    [JsonPropertyName("rest_id")] public required string RestId { get; set; }
+    public required UserMediaResponseUserResultLegacy Legacy { get; set; }
+}
+
+public record UserMediaResponseUserResultLegacy
+{
+    [JsonPropertyName("screen_name")] public required string ScreenName { get; set; }
+    public required string Name { get; set; }
+    [JsonPropertyName("created_at")] public required string CreatedAt { get; set; }
+    public required string Description { get; set; }
+    [JsonPropertyName("media_count")] public required int MediaCount { get; set; }
 }
 
 public record UserMediaResponseLegacy

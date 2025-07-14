@@ -33,7 +33,7 @@ public class MainService(
             // 下载媒体
             if (!args.WithoutDownloadMedia)
             {
-                await download.DownloadMediaAsync(user.Id, cancel);
+                await download.DownloadMediaAsync(cancel);
             }
         }
         catch (OperationCanceledException)
@@ -62,21 +62,12 @@ public class MainService(
             user = await api.GetUserByScreenNameAsync(args.Username, cancel);
 
             // 储存用户信息
-            if (!storage.Content.Users.TryGetValue(user.Id, out var data))
-            {
-                // 创建用户
-                storage.Content.Users[user.Id] = new UserData { Info = user };
-            }
-            else
-            {
-                // 更新用户信息
-                data.Info = user;
-            }
+            storage.Content.Users[user.Id] = user;
         }
         else
         {
             // 从存储中获取用户信息
-            user = storage.Content.Users.Select(x => x.Value.Info).First(x => x.Name == args.Username);
+            user = storage.Content.Users.Select(x => x.Value).First(x => x.Name == args.Username);
         }
         
         logger.LogInformation("用户信息:");
@@ -84,7 +75,7 @@ public class MainService(
         logger.LogInformation("  名称: {Name}", user.Name);
         logger.LogInformation("  昵称: {Nickname}", user.Nickname);
         logger.LogInformation("  描述: {Description}", user.Description);
-        logger.LogInformation("  注册时间: {CreationTime:yyyy-MM-dd HH:mm:ss zzz}", user.CreationTime);
+        logger.LogInformation("  注册时间: {CreationTime:yyyy-MM-dd HH:mm:ss}", user.CreationTime.LocalDateTime);
         logger.LogInformation("  媒体数量: {MediaCount}", user.MediaCount);
 
         return user;
@@ -101,7 +92,6 @@ public class MainService(
         logger.LogInformation("  目标媒体类型: {DownloadType}", args.DownloadType.HasFlag(MediaType.All) ? "All" : args.DownloadType);
         logger.LogInformation("  无需获取信息: {OnlyDownloadInfo}", args.WithoutDownloadInfo);
         logger.LogInformation("  无需下载媒体: {OnlyDownloadMedia}", args.WithoutDownloadMedia);
-        logger.LogInformation("  状态存储目录: {StorageDir}", args.StorageDir);
         logger.LogInformation("  工作目录: {WorkDir}", args.WorkDir);
         logger.LogInformation("  日志级别: {LogLevel}", args.LogLevel);
     }

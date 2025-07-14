@@ -15,7 +15,7 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
         WriteIndented = true
     };
     
-    private readonly FileInfo _file = new(Path.Combine(args.StorageDir, "storage.json"));
+    private readonly FileInfo _file = new(Path.Combine(args.OutputDir, "metadata.json"));
 
     // 公开成员
     public StorageContent Content { get; private set; } = new();
@@ -28,7 +28,7 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
         try
         {
             // 创建目录
-            Directory.CreateDirectory(args.StorageDir);
+            Directory.CreateDirectory(args.OutputDir);
 
             // 打开文件
             await using var fs = _file.Create(); // 使用 Create 覆盖文件
@@ -69,10 +69,7 @@ public class StorageService(ILogger<StorageService> logger, CommandLineArguments
             }
 
             // 将帖子转换成降序排列
-            foreach (var pair in data.Users)
-            {
-                pair.Value.Tweets = new SortedDictionary<string, Tweet>(pair.Value.Tweets, StorageContent.IdComparer);
-            }
+            data.Tweets = new SortedDictionary<string, Tweet>(data.Tweets, StorageContent.IdComparer);
 
             Content = data;
             

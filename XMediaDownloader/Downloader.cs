@@ -12,7 +12,7 @@ namespace XMediaDownloader;
 
 public static class Downloader
 {
-    public static async Task Run(ParseResult result, CancellationToken cancel)
+    public static async Task RunAsync(ParseResult result, CancellationToken cancel)
     {
         // 获取参数
         var username = result.GetRequiredValue(CommandLine.UsernameOption);
@@ -22,11 +22,11 @@ public static class Downloader
         var outputPathFormat = result.GetRequiredValue(CommandLine.OutputPathFormatOption);
         var downloadType = result.GetRequiredValue(CommandLine.DownloadTypeOption).Aggregate((a, b) => a | b); // 合并
         var withoutDownloadMedia = result.GetRequiredValue(CommandLine.WithoutDownloadMediaOption);
-        var storageDir = result.GetRequiredValue(CommandLine.StorageDirOption);
         var workDir = result.GetRequiredValue(CommandLine.WorkDirOption);
         var logLevel = result.GetRequiredValue(CommandLine.LogLevelOption);
 
         // 设置工作目录
+        Directory.CreateDirectory(workDir);
         Environment.CurrentDirectory = workDir;
 
         // 日志
@@ -67,7 +67,6 @@ public static class Downloader
                 downloadType,
                 withoutDownloadInfo,
                 withoutDownloadMedia,
-                storageDir, 
                 workDir,
                 logLevel
             ));

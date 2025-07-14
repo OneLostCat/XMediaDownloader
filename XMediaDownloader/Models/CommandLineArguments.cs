@@ -10,7 +10,6 @@ public record CommandLineArguments(
     MediaType DownloadType,
     bool WithoutDownloadInfo,
     bool WithoutDownloadMedia,
-    string StorageDir,
     string WorkDir,
     LogEventLevel LogLevel
 );

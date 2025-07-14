@@ -4,8 +4,8 @@ namespace XMediaDownloader.Models.XApi;
 
 public record UserMediaVariables(
     string UserId,
-    string Cursor,
-    int Count = 20,
+    int Count,
+    string? Cursor,
     bool IncludePromotedContent = false,
     bool WithClientEventToken = false,
     bool WithBirdwatchNotes = false,

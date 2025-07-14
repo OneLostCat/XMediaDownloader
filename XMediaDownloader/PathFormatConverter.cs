@@ -19,6 +19,7 @@ public static partial class PathFormatConverter
         var logLevel = result.GetRequiredValue(CommandLine.LogLevelOption);
 
         // 设置工作目录
+        Directory.CreateDirectory(workDir);
         Environment.CurrentDirectory = workDir;
 
         // 日志

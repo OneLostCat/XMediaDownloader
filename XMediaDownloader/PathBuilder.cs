@@ -64,7 +64,7 @@ public static class PathBuilder
             tweetText,
             tweetHashtags,
             mediaIndex,
-            mediaType,
+            mediaType?.ToString().ToLower(),
             mediaUrl,
             mediaExtension,
             mediaBitrate
