@@ -2,33 +2,32 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+
+        <!-- AOT -->
         <PublishAot>true</PublishAot>
         <!--<InvariantGlobalization>true</InvariantGlobalization>-->
+
+        <!-- 应用信息 -->
         <Title>MediaDownloader</Title>
         <Authors>OneLostCat</Authors>
         <Description>MediaDownloader</Description>
-        <Copyright>© 2025 OneLostCat</Copyright>
+        <Copyright>© 2025-2026 OneLostCat. All Rights Reserved.</Copyright>
         <AssemblyVersion>2.0.0</AssemblyVersion>
         <FileVersion>2.0.0</FileVersion>
         <Version>2.0.0</Version>
     </PropertyGroup>
-    
-    <ItemGroup>
-        <!--配置非可选构造函数参数和遵从可空性 https://learn.microsoft.com/zh-cn/dotnet/standard/serialization/system-text-json/required-properties-->
-        <!--暂时禁用因为存在限制 https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/nullable-annotations#limitations-->
-        <!--<RuntimeHostConfigurationOption Include="System.Text.Json.Serialization.RespectRequiredConstructorParametersDefault" Value="true" />-->
-        <!--<RuntimeHostConfigurationOption Include="System.Text.Json.Serialization.RespectNullableAnnotationsDefault" Value="true" />-->
-    </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
-      <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.6.0" />
-      <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-      <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-      <PackageReference Include="System.CommandLine" Version="2.0.0-beta5.25306.1" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+      <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.2.0" />
+      <PackageReference Include="Scriban" Version="6.5.2" />
+      <PackageReference Include="Serilog" Version="4.3.0" />
+      <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+      <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+      <PackageReference Include="System.CommandLine" Version="2.0.2" />
     </ItemGroup>
 
 </Project>

@@ -1,10 +1,7 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
-namespace MediaDownloader.Models.XApi;
+namespace MediaDownloader.Models.X.Api;
 
-public record UserByScreenNameVariables(string ScreenName);
-
-// Json 序列化
 [JsonSerializable(typeof(UserByScreenNameVariables))]
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower, UseStringEnumConverter = true)]
 public partial class UserByScreenNameVariablesContext : JsonSerializerContext;

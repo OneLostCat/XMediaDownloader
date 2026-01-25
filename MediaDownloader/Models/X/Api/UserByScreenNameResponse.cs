@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MediaDownloader.Models.XApi;
+namespace MediaDownloader.Models.X.Api;
 
 public record UserByScreenNameResponse
 {
@@ -27,8 +27,3 @@ public record UserByScreenNameResponseLegacy
     public required string CreatedAt { get; set; }
     public required int MediaCount { get; set; }
 }
-
-// Json 序列化
-[JsonSerializable(typeof(GraphQlResponse<UserByScreenNameResponse>))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower, UseStringEnumConverter = true)]
-public partial class UserByScreenNameResponseContext : JsonSerializerContext;

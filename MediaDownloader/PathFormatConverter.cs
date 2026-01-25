@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using MediaDownloader.Models;
+using MediaDownloader.Models.X;
 using Serilog;
 
 namespace MediaDownloader;
@@ -12,21 +13,15 @@ public static partial class PathFormatConverter
     {
         // 获取参数
         var sourceDir = result.GetRequiredValue(CommandLine.SourceDirOption);
-        var outputDir = result.GetRequiredValue(CommandLine.OutputDirOption);
-        var outputPathFormat = result.GetRequiredValue(CommandLine.OutputPathFormatOption);
+        var outputDir = result.GetRequiredValue(CommandLine.OutputOption);
+        var outputPathTemplate = result.GetRequiredValue(CommandLine.OutputTemplateOption);
         var dryRun = result.GetRequiredValue(CommandLine.DryRunOption);
-        var workDir = result.GetRequiredValue(CommandLine.WorkDirOption);
-        var logLevel = result.GetRequiredValue(CommandLine.LogLevelOption);
-
-        // 设置工作目录
-        Directory.CreateDirectory(workDir);
-        Environment.CurrentDirectory = workDir;
+        
 
         // 日志
         await using var logger = new LoggerConfiguration()
-            .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:lj}{NewLine}{Exception}")
-            // .WriteTo.Console(outputTemplate: "[{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-            .MinimumLevel.Is(logLevel)
+            .WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}")
+            // .WriteTo.Console(outputTemplate: "[{SourceContext}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
         Log.Logger = logger;
@@ -36,10 +31,8 @@ public static partial class PathFormatConverter
         logger.Information("参数:");
         logger.Information("  源目录: {OriginDir}", sourceDir);
         logger.Information("  输出目录: {OutputDir}", outputDir);
-        logger.Information("  输出路径格式: {OutputPathFormat}", outputPathFormat);
+        logger.Information("  输出路径格式: {OutputPathTemplate}", outputPathTemplate);
         logger.Information("  空运行: {DryRun}", dryRun);
-        logger.Information("  工作目录: {WorkDir}", workDir);
-        logger.Information("  日志级别: {LogLevel}", logLevel);
 
         // 转换
         logger.Information("开始转换");
@@ -67,9 +60,9 @@ public static partial class PathFormatConverter
                 // 获取信息
                 var groups = match.Groups;
                 var username = groups["Username"].Value;
-                var tweetId = groups["TweetId"].Value;
+                var tweetId = groups["Id"].Value;
                 var tweetCreationTime = new DateTimeOffset(
-                    DateTime.ParseExact(groups["TweetCreationTime"].Value, "yyyyMMdd_HHmmss", CultureInfo.InvariantCulture),
+                    DateTime.ParseExact(groups["Time"].Value, "yyyyMMdd_HHmmss", CultureInfo.InvariantCulture),
                     TimeSpan.FromHours(8)
                 ).ToUniversalTime(); // 将 UTC+8 转换为 UTC
                 var mediaIndex = int.Parse(groups["MediaIndex"].Value);
@@ -84,7 +77,7 @@ public static partial class PathFormatConverter
 
                 // 生成文件路径
                 var outputPath = PathBuilder.Build(
-                    outputPathFormat,
+                    outputPathTemplate,
                     null,
                     username,
                     null,
@@ -126,6 +119,6 @@ public static partial class PathFormatConverter
     }
 
     [GeneratedRegex(
-        @"^(?<Username>[^-]+)-(?<TweetId>\d+)-(?<TweetCreationTime>\d{8}_\d{6})-(?<MediaType>[^-]{3})(?<MediaIndex>\d)\.(?<Extension>[^-]{3})$")]
+        @"^(?<Username>[^-]+)-(?<Id>\d+)-(?<Time>\d{8}_\d{6})-(?<MediaType>[^-]{3})(?<MediaIndex>\d)\.(?<Extension>[^-]{3})$")]
     private static partial Regex OriginPathRegex();
 }

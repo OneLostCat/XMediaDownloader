@@ -1,4 +1,4 @@
-namespace MediaDownloader.Models;
+namespace MediaDownloader.Models.X;
 
 public record Tweet
 {

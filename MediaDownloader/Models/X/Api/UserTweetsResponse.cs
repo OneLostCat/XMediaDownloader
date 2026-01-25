@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace MediaDownloader.Models.XApi;
+﻿namespace MediaDownloader.Models.X.Api;
 
 public record UserTweetsResponse
 {
@@ -93,8 +91,3 @@ public record UserTweetsResponseTweetResultLegacy
     public required string CreatedAt { get; set; }
     public required string Text { get; set; }
 }
-
-// Json 序列化
-[JsonSerializable(typeof(GraphQlResponse<UserMediaResponse>))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-public partial class UserTweetsResponseContext : JsonSerializerContext;

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MediaDownloader.Models.XApi;
+namespace MediaDownloader.Models.X.Api;
 
 public record UserMediaResponse
 {
@@ -76,7 +76,7 @@ public record UserMediaResponseTweetResult
 
 public record UserMediaResponseCore
 {
-    [JsonPropertyName("user_results")] public required UserMediaResponseUserResults UserResults { get; set; }
+    [JsonPropertyName("user_results")] public required UserMediaResponseUserResults XUserResults { get; set; }
 }
 
 public record UserMediaResponseUserResults
@@ -127,21 +127,16 @@ public record UserMediaResponseMedia
 {
     public required string Type { get; set; }
     [JsonPropertyName("media_url_https")] public required string MediaUrlHttps { get; set; }
-    [JsonPropertyName("video_info")] public UserMediaResponseVideoInfo? VideoInfo { get; set; } // 可能为空
+    [JsonPropertyName("video_info")] public XUserMediaResponseVideoInfo? VideoInfo { get; set; } // 可能为空
 }
 
-public record UserMediaResponseVideoInfo
+public record XUserMediaResponseVideoInfo
 {
-    public required List<UserMediaResponseVideoVariant> Variants { get; set; }
+    public required List<XUserMediaResponseVideoVariant> Variants { get; set; }
 }
 
-public record UserMediaResponseVideoVariant 
+public record XUserMediaResponseVideoVariant 
 {
     public required string Url { get; set; }
     public int? Bitrate { get; set; } // 可能为空，原类型为 long
 }
-
-// Json 序列化
-[JsonSerializable(typeof(GraphQlResponse<UserMediaResponse>))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-public partial class UserMediaResponseContext : JsonSerializerContext;

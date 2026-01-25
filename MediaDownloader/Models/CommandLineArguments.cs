@@ -1,15 +1,12 @@
-﻿using Serilog.Events;
+﻿using MediaDownloader.Models.X;
+using Serilog.Events;
 
 namespace MediaDownloader.Models;
 
 public record CommandLineArguments(
     string Username,
-    string CookieFile,
+    FileInfo CookieFile,
     string OutputDir,
-    string OutputPathFormat,
-    MediaType DownloadType,
-    bool WithoutDownloadInfo,
-    bool WithoutDownloadMedia,
-    string WorkDir,
-    LogEventLevel LogLevel
+    string OutputPathTemplate,
+    MediaType DownloadType
 );

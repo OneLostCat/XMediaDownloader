@@ -1,52 +1,41 @@
 ﻿using System.CommandLine;
 using MediaDownloader.Models;
-using Serilog.Events;
+using MediaDownloader.Models.X;
 
 namespace MediaDownloader;
 
 public static class CommandLine
 {
-    // 信息获取选项
+    // 获取选项
+    public static readonly Option<MediaSource> MediaSourceOption = new("-s", "--source")
+        { Description = "媒体来源", Required = true };
+
     public static readonly Option<string> UsernameOption = new("-u", "--username")
         { Description = "目标用户", Required = true };
 
-    public static readonly Option<string> CookieFileOption = new("-c", "--cookie-file")
-        { Description = "用于请求 API 的 Cookie 文件", Required = true };
-
-    public static readonly Option<bool> WithoutDownloadInfoOption = new("--without-download-info")
-        { Description = "无需获取信息", DefaultValueFactory = _ => false };
+    public static readonly Option<FileInfo> CookieFileOption = new("-c", "--cookie")
+        { Description = "用于请求的 Cookie", Required = true };
+    
+    // 下载选项
+    public static readonly Option<List<MediaType>> MediaTypeOption = new("-t", "--type")
+    {
+        Description = "下载媒体类型",
+        DefaultValueFactory = _ => [MediaType.All],
+        AllowMultipleArgumentsPerToken = true,
+        Arity = ArgumentArity.OneOrMore
+    };
 
     // 输出选项
-    public static readonly Option<string> OutputDirOption = new("-o", "--output-dir")
+    public static readonly Option<string> OutputOption = new("-o", "--output")
         { Description = "输出目录", DefaultValueFactory = _ => "." };
 
-    public static readonly Option<string> OutputPathFormatOption = new("-O", "--output-path-format")
+    public static readonly Option<string> OutputTemplateOption = new("-O", "--output-template")
     {
-        Description = "输出文件路径格式",
-        DefaultValueFactory = _ => "{TweetId}-{Username}-{TweetCreationTime}-{MediaIndex}-{MediaType}{MediaExtension}"
+        Description = "输出文件路径格式", DefaultValueFactory = _ => "{{id}}-{{username}}-{{time}}-{{index}}-{{type}}"
     };
-
-    // 下载选项
-    public static readonly Option<List<MediaType>> DownloadTypeOption = new("-t", "--download-type")
-    {
-        Description = "目标媒体类型",
-        DefaultValueFactory = _ => [MediaType.All],
-        Arity = ArgumentArity.OneOrMore,
-        AllowMultipleArgumentsPerToken = true
-    };
-
-    public static readonly Option<bool> WithoutDownloadMediaOption = new("--without-download-media")
-        { Description = "无需下载媒体", DefaultValueFactory = _ => false };
-
-    // 其他选项
-    public static readonly Option<string> WorkDirOption = new("-w", "--work-dir")
-        { Description = "工作目录", DefaultValueFactory = _ => "." };
-
-    public static readonly Option<LogEventLevel> LogLevelOption = new("-l", "--log-level")
-        { Description = "日志级别", DefaultValueFactory = _ => LogEventLevel.Information };
-
+    
     // 路径格式转换选项
-    public static readonly Option<string> SourceDirOption = new("-s", "--source-dir")
+    public static readonly Option<string> SourceDirOption = new("-s", "--source")
         { Description = "源目录", Required = true };
 
     public static readonly Option<bool> DryRunOption = new("-n", "--dry-run")
@@ -60,11 +49,9 @@ public static class CommandLine
         var convertCommand = new Command("convert", "X 媒体路径格式转换工具")
         {
             SourceDirOption,
-            OutputDirOption,
-            OutputPathFormatOption,
+            OutputOption,
+            OutputTemplateOption,
             DryRunOption,
-            WorkDirOption,
-            LogLevelOption,
         };
 
         convertCommand.SetAction(PathFormatConverter.Run);
@@ -72,19 +59,16 @@ public static class CommandLine
         // 根命令
         var command = new RootCommand("X 媒体下载工具")
         {
+            MediaSourceOption,
             UsernameOption,
             CookieFileOption,
-            WithoutDownloadInfoOption,
-            OutputDirOption,
-            OutputPathFormatOption,
-            DownloadTypeOption,
-            WithoutDownloadMediaOption,
-            WorkDirOption,
-            LogLevelOption,
+            OutputOption,
+            OutputTemplateOption,
+            MediaTypeOption,
             convertCommand
         };
 
-        command.SetAction(Downloader.RunAsync);
+        command.SetAction(Main.RunAsync);
 
         // 运行
         return await command.Parse(args).InvokeAsync();

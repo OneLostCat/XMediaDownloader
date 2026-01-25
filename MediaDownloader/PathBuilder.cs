@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using MediaDownloader.Models;
+using MediaDownloader.Models.X;
 
 namespace MediaDownloader;
 
@@ -9,12 +10,10 @@ public static class PathBuilder
     {
         { "UserId", "0" },
         { "Username", "1" },
-        // { "UserNickname", "2" },
-        // { "UserDescription", "3" },
         { "UserCreationTime", "4" },
         { "UserMediaTweetCount", "5" },
-        { "TweetId", "6" },
-        { "TweetCreationTime", "7" },
+        { "Id", "6" },
+        { "Time", "7" },
         // { "TweetText", "8" },
         // { "TweetHashtags", "9" },
         { "MediaIndex", "10" },
