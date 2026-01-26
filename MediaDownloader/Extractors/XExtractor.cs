@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -9,31 +8,34 @@ using MediaDownloader.Models;
 using MediaDownloader.Models.X;
 using MediaDownloader.Models.X.Api;
 using Microsoft.Extensions.Logging;
-using Scriban;
-using UserByScreenNameResponseContext = MediaDownloader.Models.X.Api.UserByScreenNameResponseContext;
 
-namespace MediaDownloader.Fetchers;
+namespace MediaDownloader.Extractors;
 
-public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFetcher
+public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) : IMediaExtractor
 {
-    private readonly HttpClient _http = BuildHttpClient(args.CookieFile);
+    private readonly HttpClient _http = BuildHttpClient(args.Cookie);
 
     // 主要方法
-    public async Task<List<MediaItem>> FetchMediaAsync(string username, CancellationToken cancel)
+    public async Task<MediaCollection> ExtractAsync(CancellationToken cancel)
     {
         // 获取用户信息
-        var user = await GetUserByScreenNameAsync(username, cancel);
+        var user = await GetUserByScreenNameAsync(args.Username, cancel);
 
         // 获取帖子
         var tweets = await GetUserMediaTweetsAsync(user, cancel);
 
         // 获取媒体
-        var medias = await GetMediaItemsAsync(user, tweets, cancel);
+        var medias = GetMedias(user, tweets, cancel);
 
-        return medias;
+        return new MediaCollection
+        {
+            Medias = medias,
+            Downloader = Models.MediaDownloader.Http,
+            DefaultTemplate = "{{user}}/{{id}}-{{year}}-{{month}}-{{day}}_{{hour}}-{{minute}}-{{second}}-{{index}}-{{type}}"
+        };
     }
 
-    private async Task<User> GetUserByScreenNameAsync(string username, CancellationToken cancel)
+    private async Task<XUser> GetUserByScreenNameAsync(string username, CancellationToken cancel)
     {
         // 参数
         var variables = JsonSerializer.Serialize(new UserByScreenNameVariables(username),
@@ -43,8 +45,7 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
         var response = await _http.GetAsync(
             BuildUrl(UserByScreenNameUrl, variables, UserByScreenNameFeatures, "{\"withAuxiliaryUserLabels\":true}"), cancel);
 
-        var a = await response.Content.ReadAsStringAsync(cancel);
-        
+
         // 解析响应
         var content = await response.Content.ReadFromJsonAsync<GraphQlResponse<UserByScreenNameResponse>>(
             UserByScreenNameResponseContext.Default.GraphQlResponseUserByScreenNameResponse, cancel);
@@ -53,7 +54,7 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
 
         // 解析用户
         var result = content.Data.User.Result;
-        var user = new User
+        var user = new XUser
         {
             Id = result.RestId,
             Name = result.Legacy.ScreenName,
@@ -66,9 +67,9 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
         return user;
     }
 
-    private async Task<List<Tweet>> GetUserMediaTweetsAsync(User user, CancellationToken cancel)
+    private async Task<List<XTweet>> GetUserMediaTweetsAsync(XUser user, CancellationToken cancel)
     {
-        var tweets = new List<Tweet>();
+        var tweets = new List<XTweet>();
         var cursor = "";
 
         var total = user.MediaTweetCount; // 总帖子数量
@@ -120,11 +121,66 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
         return tweets;
     }
 
-    private async Task<List<MediaItem>> GetMediaItemsAsync(User user, List<Tweet> tweets, CancellationToken cancel)
+    private async Task<(List<XTweet> list, string cursor)> GetUserMediaTweetsAsync(string userId, string cursor,
+        CancellationToken cancel)
     {
-        var template = Template.Parse(args.OutputPathTemplate);
-        var medias = new List<MediaItem>();
+        // 参数
+        var variables = JsonSerializer.Serialize(new UserMediaVariables(userId, 40, cursor),
+            UserMediaVariablesContext.Default.UserMediaVariables);
+
+        // 发送请求
+        var response = await _http.GetAsync(
+            BuildUrl(UserMediaUrl, variables, UserMediaFeatures, "{\"withArticlePlainText\":false}"), cancel);
         
+        // 解析
+        var content = await response.Content.ReadFromJsonAsync<GraphQlResponse<UserMediaResponse>>(
+            UserMediaResponseContext.Default.GraphQlResponseUserMediaResponse, cancel);
+
+        if (content?.Data == null) throw new Exception("无法获取用户媒体"); // 无法判断是否会为空
+
+        // 处理帖子
+        var list = new List<XTweet>();
+        var nextCursor = "";
+
+        foreach (var instruction in content.Data.User.Result.TimelineV2.Timeline.Instructions)
+        {
+            switch (instruction.Type)
+            {
+                case "TimelineAddEntries":
+                {
+                    foreach (var entry in instruction.Entries)
+                    {
+                        if (entry.EntryId.StartsWith("profile-"))
+                        {
+                            list.AddRange(ProcessTweets(entry));
+                        }
+                        else if (entry.EntryId.StartsWith("cursor-bottom-"))
+                        {
+                            nextCursor = entry.Content.Value ?? throw new Exception("无法获取下一个指针"); // 无法判断是否会为空
+                        }
+                    }
+
+                    break;
+                }
+                case "TimelineAddToModule":
+                {
+                    list.AddRange(instruction.ModuleItems
+                        .Where(entry => entry.EntryId.StartsWith("profile-"))
+                        .Select(ProcessTweet)
+                    );
+
+                    break;
+                }
+            }
+        }
+
+        return (list, nextCursor);
+    }
+
+    private List<MediaInfo> GetMedias(XUser user, List<XTweet> tweets, CancellationToken cancel)
+    {
+        var medias = new List<MediaInfo>();
+
         // 遍历帖子
         foreach (var tweet in tweets)
         {
@@ -136,7 +192,7 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
 
                 // 获取媒体
                 var media = tweet.Media[i];
-                var items = new List<(string Url, string Extension, int? Bitrate)>();
+                var items = new List<(string Url, string Extension)>();
 
                 // 获取图片 (包括视频和 GIF 的封面)
                 var index = media.Url.LastIndexOf('.'); // 获取最后一个 "." 的位置
@@ -149,47 +205,53 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
                 // 获取图片格式
                 var format = media.Url[(index + 1)..];
 
-                items.Add(($"{media.Url[..index]}?format={format}&name=orig", $".{format}", null));
+                items.Add(($"{media.Url[..index]}?format={format}&name=orig", $".{format}"));
 
                 // 跳过无需下载的媒体类型
-                if (!args.DownloadType.HasFlag(media.Type)) continue;
+                if (!args.Type.HasFlag(media.Type)) continue;
 
                 // 获取视频和 GIF
-                if (media.Type != MediaType.Image)
+                if (media.Type != XMediaType.Image)
                 {
                     // 获取最高质量视频
                     var video = media.Video
                         .OrderByDescending(x => x.Bitrate)
                         .First();
 
-                    items.Add((video.Url, Path.GetExtension(new Uri(video.Url).Segments.Last()),
-                        video.Bitrate));
+                    items.Add((video.Url, Path.GetExtension(new Uri(video.Url).Segments.Last())));
                 }
+                
+                // 获取时间
+                var time = tweet.CreationTime.LocalDateTime;
 
                 // 添加媒体项
-                foreach (var item in items)
+                medias.AddRange(items.Select(item => new MediaInfo
                 {
-                    var path = await RenderAsync(template, new MediaInfo
+                    Url = item.Url,
+                    Extension = item.Extension,
+                    User = user.Name,
+                    Id = tweet.Id,
+                    Year = time.Year.ToString("D4"),
+                    Month = time.Month.ToString("D2"),
+                    Day = time.Day.ToString("D2"),
+                    Hour = time.Hour.ToString("D2"),
+                    Minute = time.Minute.ToString("D2"),
+                    Second = time.Second.ToString("D2"),
+                    Index = i + 1,
+                    Type = media.Type switch
                     {
-                        User = user.Name,
-                        Id = tweet.Id,
-                        Time = tweet.CreationTime,
-                        Index = i + 1,
-                        Type = media.Type,
-                    });
-
-                    medias.Add(new MediaItem
-                    {
-                        Url = item.Url,
-                        Path = path + item.Extension
-                    });
-                }
+                        XMediaType.Image => MediaType.Image,
+                        XMediaType.Video => MediaType.Video,
+                        XMediaType.Gif => MediaType.Gif,
+                        _ => throw new ArgumentOutOfRangeException(nameof(media.Type), media.Type, "未知媒体类型")
+                    }
+                }));
             }
         }
 
         return medias;
     }
-    
+
     // 工具方法
     private static HttpClient BuildHttpClient(FileInfo cookieFile)
     {
@@ -198,7 +260,7 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
         // 读取 Cookie
         var cookie = new CookieContainer();
         var cookieHeader = File.ReadAllText(cookieFile.FullName);
-        
+
         foreach (var item in cookieHeader.Split(';', StringSplitOptions.TrimEntries))
         {
             var pair = item.Split('=');
@@ -240,7 +302,7 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
 
         return http;
     }
-    
+
     private static string BuildUrl(string endpoint, string variables, string? features = null, string? fieldToggles = null)
     {
         var sb = new StringBuilder(endpoint + $"?variables={variables}");
@@ -252,82 +314,31 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
         return sb.ToString();
     }
     
-    private async Task<(List<Tweet> list, string cursor)> GetUserMediaTweetsAsync(string userId, string cursor,
-        CancellationToken cancel)
-    {
-        // 参数
-        var variables = JsonSerializer.Serialize(new UserMediaVariables(userId, 40, cursor),
-            UserMediaVariablesContext.Default.UserMediaVariables);
-
-        // 发送请求
-        var response = await _http.GetAsync(
-            BuildUrl(UserMediaUrl, variables, UserMediaFeatures, "{\"withArticlePlainText\":false}"), cancel);
-
-        var a = await response.Content.ReadAsStringAsync(cancel);
-        
-        // 解析
-        var content = await response.Content.ReadFromJsonAsync<GraphQlResponse<UserMediaResponse>>(
-            UserMediaResponseContext.Default.GraphQlResponseUserMediaResponse, cancel);
-
-        if (content?.Data == null) throw new Exception("无法获取用户媒体"); // 无法判断是否会为空
-
-        // 处理帖子
-        var list = new List<Tweet>();
-        var nextCursor = "";
-
-        foreach (var instruction in content.Data.User.Result.TimelineV2.Timeline.Instructions)
-        {
-            switch (instruction.Type)
-            {
-                case "TimelineAddEntries":
-                {
-                    foreach (var entry in instruction.Entries)
-                    {
-                        if (entry.EntryId.StartsWith("profile-"))
-                        {
-                            list.AddRange(ProcessTweets(entry));
-                        }
-                        else if (entry.EntryId.StartsWith("cursor-bottom-"))
-                        {
-                            nextCursor = entry.Content.Value ?? throw new Exception("无法获取下一个指针"); // 无法判断是否会为空
-                        }
-                    }
-
-                    break;
-                }
-                case "TimelineAddToModule":
-                {
-                    list.AddRange(instruction.ModuleItems
-                        .Where(entry => entry.EntryId.StartsWith("profile-"))
-                        .Select(ProcessTweet)
-                    );
-
-                    break;
-                }
-            }
-        }
-
-        return (list, nextCursor);
-    }
-
-    private static IEnumerable<Tweet> ProcessTweets(UserMediaResponseEntry entry)
+    private static IEnumerable<XTweet> ProcessTweets(UserMediaResponseEntry entry)
     {
         foreach (var item in entry.Content.Items)
         {
             var tweetResult = item.Item.ItemContent.TweetResults.Result;
-            var userResult = tweetResult.Core.XUserResults.Result;
-
+            
+            // 处理特别的帖子
+            var restid = tweetResult.RestId ?? tweetResult.Tweet!.RestId;
+            var core = tweetResult.Core ?? tweetResult.Tweet!.Core;
+            var legacy = tweetResult.Legacy ?? tweetResult.Tweet!.Legacy;
+            
+            // 获取用户信息
+            var userResult = core.XUserResults.Result;
+            
             if (userResult.RestId == null) throw new Exception("无法获取用户 ID"); // 无法判断是否会为空
 
             // 解析帖子
-            var tweet = new Tweet
+            var tweet = new XTweet
             {
-                Id = tweetResult.RestId,
+                Id = restid,
                 UserId = userResult.RestId,
-                CreationTime = DateTimeOffset.ParseExact(tweetResult.Legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
-                Text = tweetResult.Legacy.FullText,
-                Hashtags = tweetResult.Legacy.Entities.Hashtags.Select(x => x.Text).ToList(),
-                Media = ProcessMedia(tweetResult.Legacy.ExtendedEntities?.Media ?? throw new Exception("无法获取媒体")) // 无法判断是否会为空
+                CreationTime = DateTimeOffset.ParseExact(legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
+                Text = legacy.FullText,
+                Hashtags = legacy.Entities.Hashtags.Select(x => x.Text).ToList(),
+                Media = ProcessMedia(legacy.ExtendedEntities?.Media ?? throw new Exception("无法获取媒体")) // 无法判断是否会为空
                     .ToList()
             };
 
@@ -335,52 +346,55 @@ public class XFetcher(ILogger<XFetcher> logger, CommandLineArguments args) : IFe
         }
     }
 
-    private static Tweet ProcessTweet(UserMediaResponseItem entry)
+    private static XTweet ProcessTweet(UserMediaResponseItem entry)
     {
         var tweetResult = entry.Item.ItemContent.TweetResults.Result;
-        var userResult = tweetResult.Core.XUserResults.Result;
+        
+        // 处理特别的帖子
+        var restid = tweetResult.RestId ?? tweetResult.Tweet!.RestId;
+        var core = tweetResult.Core ?? tweetResult.Tweet!.Core;
+        var legacy = tweetResult.Legacy ?? tweetResult.Tweet!.Legacy;
+        
+        // 获取用户信息
+        var userResult = core.XUserResults.Result;
 
         if (userResult.RestId == null) throw new Exception("无法获取用户 ID"); // 无法判断是否会为空
 
         // 解析帖子
-        var tweet = new Tweet
+        var tweet = new XTweet
         {
-            Id = tweetResult.RestId,
+            Id = restid,
             UserId = userResult.RestId,
-            CreationTime = DateTimeOffset.ParseExact(tweetResult.Legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
-            Text = tweetResult.Legacy.FullText,
-            Hashtags = tweetResult.Legacy.Entities.Hashtags.Select(x => x.Text).ToList(),
-            Media = ProcessMedia(tweetResult.Legacy.Entities.Media).ToList()
+            CreationTime = DateTimeOffset.ParseExact(legacy.CreatedAt, TimeFormat, CultureInfo.InvariantCulture),
+            Text = legacy.FullText,
+            Hashtags = legacy.Entities.Hashtags.Select(x => x.Text).ToList(),
+            Media = ProcessMedia(legacy.Entities.Media).ToList()
         };
 
         return tweet;
     }
 
-    private static IEnumerable<Media> ProcessMedia(List<UserMediaResponseMedia> mediaEntities) => mediaEntities
-        .Select(x => new Media
+    private static IEnumerable<XMedia> ProcessMedia(List<UserMediaResponseMedia> mediaEntities) => mediaEntities
+        .Select(x => new XMedia
         {
             Type = x.Type switch
             {
-                "photo" => MediaType.Image,
-                "video" => MediaType.Video,
-                "animated_gif" => MediaType.Gif,
+                "photo" => XMediaType.Image,
+                "video" => XMediaType.Video,
+                "animated_gif" => XMediaType.Gif,
                 _ => throw new ArgumentException("未知媒体类型", x.Type)
             },
             Url = x.MediaUrlHttps,
-            Video = x.VideoInfo?.Variants.Select(y => new Video { Url = y.Url, Bitrate = y.Bitrate }).ToList() ?? []
+            Video = x.VideoInfo?.Variants.Select(y => new XVideo { Url = y.Url, Bitrate = y.Bitrate }).ToList() ?? []
         });
-    
-    private static async Task<string>
-        RenderAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(Template template,
-            T model) => await template.RenderAsync(model);
-    
+
     #region 常量
 
     private const string TimeFormat = "ddd MMM dd HH:mm:ss zzz yyyy";
-    
+
     private const string UserByScreenNameUrl = "1VOOyvKkiI3FMmkeDNxM9A/UserByScreenName";
     private const string UserMediaUrl = "BGmkmGDG0kZPM-aoQtNTTw/UserMedia";
-    private const string UserTweets = "q6xj5bs0hapm9309hexA_g/UserTweets";
+    // private const string UserTweets = "q6xj5bs0hapm9309hexA_g/UserTweets";
 
     private const string UserByScreenNameFeatures =
         """

@@ -1,30 +1,32 @@
-﻿using MediaDownloader.Fetchers;
+﻿using MediaDownloader.Downloaders;
+using MediaDownloader.Extractors;
 using MediaDownloader.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace MediaDownloader.Services;
 
 public class MainService(
+    IServiceProvider services,
     ILogger<MainService> logger,
     CommandLineArguments args,
-    IFetcher fetcher,
-    DownloadService download,
     IHostApplicationLifetime lifetime) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken cancel)
     {
         try
         {
-            // 获取媒体
-            var medias = await fetcher.FetchMediaAsync(args.Username, cancel);
-            
+            // 提取媒体
+            var extractor = GetExtractor(args.Extractor);
+            var medias = await extractor.ExtractAsync(cancel);
+
             // 询问是否继续
             AskNextStep(cancel);
             
             // 下载媒体
-            await download.DownloadAsync(medias, cancel);
-            
+            var downloader = GetDownloader(medias.Downloader);
+            await downloader.DownloadAsync(medias, cancel);
         }
         catch (OperationCanceledException)
         {
@@ -34,11 +36,24 @@ public class MainService(
         {
             logger.LogCritical(exception, "错误");
         }
-        
+
         // 退出
         lifetime.StopApplication();
     }
+
+    private IMediaExtractor GetExtractor(MediaExtractor extractor) => extractor switch
+    {
+        MediaExtractor.X => services.GetRequiredService<XExtractor>(),
+        MediaExtractor.JustForFans => services.GetRequiredService<JustForFansExtractor>(),
+        _ => throw new ArgumentOutOfRangeException(nameof(extractor), extractor, "无效的媒体来源")
+    };
     
+    private IMediaDownloader GetDownloader(Models.MediaDownloader downloader) => downloader switch
+    {
+        Models.MediaDownloader.Http => services.GetRequiredService<HttpDownloader>(),
+        _ => throw new ArgumentOutOfRangeException(nameof(downloader), downloader, "无效的下载器")
+    };
+
     private static void AskNextStep(CancellationToken cancel)
     {
         while (true)
@@ -53,7 +68,7 @@ public class MainService(
             if (input?.ToLower() == "n") throw new OperationCanceledException();
         }
     }
-    
+
     // private void OutputUserInfo(User user)
     // {
     //     logger.LogInformation("用户信息:");

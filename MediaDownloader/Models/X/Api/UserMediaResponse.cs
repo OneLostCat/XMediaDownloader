@@ -69,6 +69,14 @@ public record UserMediaResponseTweetResults
 
 public record UserMediaResponseTweetResult
 {
+    [JsonPropertyName("rest_id")] public string? RestId { get; set; }
+    public UserMediaResponseCore? Core { get; set; }
+    public UserMediaResponseLegacy? Legacy { get; set; }
+    public UserMediaResponseTweetResultTweet? Tweet { get; set; }
+}
+
+public record UserMediaResponseTweetResultTweet
+{
     [JsonPropertyName("rest_id")] public required string RestId { get; set; }
     public required UserMediaResponseCore Core { get; set; }
     public required UserMediaResponseLegacy Legacy { get; set; }

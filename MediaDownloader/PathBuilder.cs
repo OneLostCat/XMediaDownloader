@@ -39,7 +39,7 @@ public static class PathBuilder
         string? tweetText,
         List<string> tweetHashtags,
         int? mediaIndex,
-        MediaType? mediaType,
+        XMediaType? mediaType,
         string? mediaUrl,
         string? mediaExtension,
         int? mediaBitrate)

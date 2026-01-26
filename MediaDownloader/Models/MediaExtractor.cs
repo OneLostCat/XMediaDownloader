@@ -1,6 +1,6 @@
 ﻿namespace MediaDownloader.Models;
 
-public enum MediaSource
+public enum MediaExtractor
 {
     X,
     JustForFans

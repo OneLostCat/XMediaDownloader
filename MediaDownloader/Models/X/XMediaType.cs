@@ -1,7 +1,7 @@
 ﻿namespace MediaDownloader.Models.X;
 
 [Flags]
-public enum MediaType
+public enum XMediaType
 {
     Image = 0b001,
     Video = 0b010,

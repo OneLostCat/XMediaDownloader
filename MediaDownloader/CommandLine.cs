@@ -1,26 +1,34 @@
 ﻿using System.CommandLine;
+using MediaDownloader.Downloaders;
+using MediaDownloader.Extractors;
 using MediaDownloader.Models;
 using MediaDownloader.Models.X;
+using MediaDownloader.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Scriban.Functions;
+using Serilog;
+using Serilog.Events;
 
 namespace MediaDownloader;
 
 public static class CommandLine
 {
     // 获取选项
-    public static readonly Option<MediaSource> MediaSourceOption = new("-s", "--source")
+    private static readonly Option<MediaExtractor> SourceOption = new("-s", "--source")
         { Description = "媒体来源", Required = true };
 
-    public static readonly Option<string> UsernameOption = new("-u", "--username")
+    private static readonly Option<string> UsernameOption = new("-u", "--username")
         { Description = "目标用户", Required = true };
 
-    public static readonly Option<FileInfo> CookieFileOption = new("-c", "--cookie")
+    private static readonly Option<FileInfo> CookieOption = new("-c", "--cookie")
         { Description = "用于请求的 Cookie", Required = true };
-    
+
     // 下载选项
-    public static readonly Option<List<MediaType>> MediaTypeOption = new("-t", "--type")
+    private static readonly Option<List<XMediaType>> TypeOption = new("-t", "--type")
     {
         Description = "下载媒体类型",
-        DefaultValueFactory = _ => [MediaType.All],
+        DefaultValueFactory = _ => [XMediaType.All],
         AllowMultipleArgumentsPerToken = true,
         Arity = ArgumentArity.OneOrMore
     };
@@ -30,10 +38,8 @@ public static class CommandLine
         { Description = "输出目录", DefaultValueFactory = _ => "." };
 
     public static readonly Option<string> OutputTemplateOption = new("-O", "--output-template")
-    {
-        Description = "输出文件路径格式", DefaultValueFactory = _ => "{{id}}-{{username}}-{{time}}-{{index}}-{{type}}"
-    };
-    
+        { Description = "输出文件路径格式" };
+
     // 路径格式转换选项
     public static readonly Option<string> SourceDirOption = new("-s", "--source")
         { Description = "源目录", Required = true };
@@ -59,18 +65,65 @@ public static class CommandLine
         // 根命令
         var command = new RootCommand("X 媒体下载工具")
         {
-            MediaSourceOption,
+            SourceOption,
             UsernameOption,
-            CookieFileOption,
+            CookieOption,
             OutputOption,
             OutputTemplateOption,
-            MediaTypeOption,
+            TypeOption,
             convertCommand
         };
 
-        command.SetAction(Main.RunAsync);
+        command.SetAction(Main);
 
         // 运行
         return await command.Parse(args).InvokeAsync();
+    }
+
+    private static async Task Main(ParseResult result, CancellationToken cancel)
+    {
+        // 创建日志
+        await using var logger = new LoggerConfiguration()
+            .WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}")
+            // .WriteTo.Console(outputTemplate: "[{SourceContext}] {Message:lj}{NewLine}{Exception}")
+            // 去除多余的日志
+            .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.Extensions.Hosting.Internal.Host", LogEventLevel.Warning)
+            .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
+            .MinimumLevel.Override("Polly", LogEventLevel.Warning)
+            .CreateLogger();
+
+        Log.Logger = logger;
+
+        try
+        {
+            // 创建主机
+            var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+            
+            // 注册服务
+            builder.Services.AddSerilog();
+            builder.Services.AddHostedService<MainService>();
+            builder.Services.AddExtractors();
+            builder.Services.AddDownloaders();
+            
+            // 注册命令行参数
+            builder.Services.AddSingleton(new CommandLineArguments(
+                result.GetRequiredValue(SourceOption),
+                result.GetRequiredValue(UsernameOption),
+                result.GetRequiredValue(CookieOption),
+                result.GetRequiredValue(OutputOption),
+                result.GetValue(OutputTemplateOption),
+                result.GetRequiredValue(TypeOption).Aggregate((a, b) => a | b) // 合并
+            ));
+            
+            // 运行
+            await builder.Build().RunAsync(cancel);
+        }
+        catch (Exception exception)
+        {
+            logger.Fatal(exception, "错误");
+        }
+
+        logger.Debug("应用退出");
     }
 }

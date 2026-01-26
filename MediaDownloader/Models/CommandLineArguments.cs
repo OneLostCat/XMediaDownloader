@@ -4,9 +4,9 @@ using Serilog.Events;
 namespace MediaDownloader.Models;
 
 public record CommandLineArguments(
+    MediaExtractor Extractor,
     string Username,
-    FileInfo CookieFile,
-    string OutputDir,
-    string OutputPathTemplate,
-    MediaType DownloadType
-);
+    FileInfo Cookie,
+    string Output,
+    string? OutputTemplate,
+    XMediaType Type);
