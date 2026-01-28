@@ -11,15 +11,15 @@ using Microsoft.Extensions.Logging;
 
 namespace MediaDownloader.Extractors;
 
-public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) : IMediaExtractor
+public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) : IMediaExtractor
 {
-    private readonly HttpClient _http = BuildHttpClient(args.Cookie);
+    private readonly HttpClient _http = BuildHttpClient(options.Cookie);
 
     // 主要方法
     public async Task<MediaCollection> ExtractAsync(CancellationToken cancel)
     {
         // 获取用户信息
-        var user = await GetUserByScreenNameAsync(args.Username, cancel);
+        var user = await GetUserByScreenNameAsync(options.User, cancel);
 
         // 获取帖子
         var tweets = await GetUserMediaTweetsAsync(user, cancel);
@@ -131,7 +131,7 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
         // 发送请求
         var response = await _http.GetAsync(
             BuildUrl(UserMediaUrl, variables, UserMediaFeatures, "{\"withArticlePlainText\":false}"), cancel);
-        
+
         // 解析
         var content = await response.Content.ReadFromJsonAsync<GraphQlResponse<UserMediaResponse>>(
             UserMediaResponseContext.Default.GraphQlResponseUserMediaResponse, cancel);
@@ -208,7 +208,16 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
                 items.Add(($"{media.Url[..index]}?format={format}&name=orig", $".{format}"));
 
                 // 跳过无需下载的媒体类型
-                if (!args.Type.HasFlag(media.Type)) continue;
+                if (options.Type.All(x => x != media.Type switch
+                    {
+                        XMediaType.Image => MediaType.Image,
+                        XMediaType.Video => MediaType.Video,
+                        XMediaType.Gif => MediaType.Gif,
+                        _ => throw new ArgumentOutOfRangeException(nameof(x), x, "未知的媒体类型")
+                    }))
+                {
+                    continue;
+                }
 
                 // 获取视频和 GIF
                 if (media.Type != XMediaType.Image)
@@ -220,7 +229,7 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
 
                     items.Add((video.Url, Path.GetExtension(new Uri(video.Url).Segments.Last())));
                 }
-                
+
                 // 获取时间
                 var time = tweet.CreationTime.LocalDateTime;
 
@@ -253,22 +262,18 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
     }
 
     // 工具方法
-    private static HttpClient BuildHttpClient(FileInfo cookieFile)
+    private static HttpClient BuildHttpClient(string cookieFile)
     {
         var baseUrl = new Uri("https://x.com/i/api/graphql/");
 
         // 读取 Cookie
         var cookie = new CookieContainer();
-        var cookieHeader = File.ReadAllText(cookieFile.FullName);
+        var cookieHeader = File.ReadAllText(cookieFile);
 
         foreach (var item in cookieHeader.Split(';', StringSplitOptions.TrimEntries))
         {
             var pair = item.Split('=');
-
-            if (pair.Length == 2)
-            {
-                cookie.Add(baseUrl, new Cookie(pair[0], pair[1]));
-            }
+            cookie.Add(baseUrl, new Cookie(pair[0], pair[1]));
         }
 
         // 创建 HttpClientHandler
@@ -280,6 +285,9 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
 
         // 创建 HttpClient
         var http = new HttpClient(httpClientHandler);
+        
+        // 设置基地址
+        http.BaseAddress = baseUrl;
 
         // 启用 HTTP/2 和 HTTP/3
         http.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
@@ -287,9 +295,6 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
         // 设置 User Agent
         http.DefaultRequestHeaders.UserAgent.ParseAdd(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0");
-
-        // 设置基地址
-        http.BaseAddress = baseUrl;
 
         // 设置认证头
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
@@ -313,21 +318,21 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
 
         return sb.ToString();
     }
-    
+
     private static IEnumerable<XTweet> ProcessTweets(UserMediaResponseEntry entry)
     {
         foreach (var item in entry.Content.Items)
         {
             var tweetResult = item.Item.ItemContent.TweetResults.Result;
-            
+
             // 处理特别的帖子
             var restid = tweetResult.RestId ?? tweetResult.Tweet!.RestId;
             var core = tweetResult.Core ?? tweetResult.Tweet!.Core;
             var legacy = tweetResult.Legacy ?? tweetResult.Tweet!.Legacy;
-            
+
             // 获取用户信息
             var userResult = core.XUserResults.Result;
-            
+
             if (userResult.RestId == null) throw new Exception("无法获取用户 ID"); // 无法判断是否会为空
 
             // 解析帖子
@@ -349,12 +354,12 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineArguments args) :
     private static XTweet ProcessTweet(UserMediaResponseItem entry)
     {
         var tweetResult = entry.Item.ItemContent.TweetResults.Result;
-        
+
         // 处理特别的帖子
         var restid = tweetResult.RestId ?? tweetResult.Tweet!.RestId;
         var core = tweetResult.Core ?? tweetResult.Tweet!.Core;
         var legacy = tweetResult.Legacy ?? tweetResult.Tweet!.Legacy;
-        
+
         // 获取用户信息
         var userResult = core.XUserResults.Result;
 

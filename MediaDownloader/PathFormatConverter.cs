@@ -1,7 +1,6 @@
 ﻿using System.CommandLine;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using MediaDownloader.Models;
 using MediaDownloader.Models.X;
 using Serilog;
 

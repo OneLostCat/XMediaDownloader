@@ -10,7 +10,7 @@ namespace MediaDownloader.Services;
 public class MainService(
     IServiceProvider services,
     ILogger<MainService> logger,
-    CommandLineArguments args,
+    CommandLineOptions args,
     IHostApplicationLifetime lifetime) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken cancel)
@@ -30,7 +30,7 @@ public class MainService(
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("取消");
+            logger.LogInformation("操作取消");
         }
         catch (Exception exception)
         {

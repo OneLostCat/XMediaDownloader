@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace MediaDownloader.Models.X.Api;
+﻿namespace MediaDownloader.Models.X.Api;
 
 public record UserByScreenNameResponse
 {

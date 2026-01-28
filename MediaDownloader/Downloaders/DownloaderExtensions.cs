@@ -1,5 +1,4 @@
-﻿using MediaDownloader.Extractors;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace MediaDownloader.Downloaders;
 

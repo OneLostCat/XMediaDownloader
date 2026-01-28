@@ -1,11 +1,12 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using MediaDownloader.Models;
 using Microsoft.Extensions.Logging;
 using Scriban;
 
 namespace MediaDownloader.Downloaders;
 
-public class HttpDownloader(ILogger<HttpDownloader>logger, CommandLineArguments args) : IMediaDownloader
+public class HttpDownloader(ILogger<HttpDownloader>logger, CommandLineOptions args) : IMediaDownloader
 {
     private readonly HttpClient _http = BuildHttpClient();
 
@@ -52,6 +53,7 @@ public class HttpDownloader(ILogger<HttpDownloader>logger, CommandLineArguments 
         var http = new HttpClient();
 
         // 启用 HTTP/2 和 HTTP/3
+        http.DefaultRequestVersion = HttpVersion.Version20;
         http.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
 
         // 设置 User Agent

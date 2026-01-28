@@ -2,11 +2,9 @@
 using MediaDownloader.Downloaders;
 using MediaDownloader.Extractors;
 using MediaDownloader.Models;
-using MediaDownloader.Models.X;
 using MediaDownloader.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Scriban.Functions;
 using Serilog;
 using Serilog.Events;
 
@@ -18,17 +16,17 @@ public static class CommandLine
     private static readonly Option<MediaExtractor> SourceOption = new("-s", "--source")
         { Description = "媒体来源", Required = true };
 
-    private static readonly Option<string> UsernameOption = new("-u", "--username")
+    private static readonly Option<string> UserOption = new("-u", "--user")
         { Description = "目标用户", Required = true };
 
-    private static readonly Option<FileInfo> CookieOption = new("-c", "--cookie")
-        { Description = "用于请求的 Cookie", Required = true };
+    private static readonly Option<string> CookieOption = new("-c", "--cookie")
+        { Description = "用于请求的 Cookie", DefaultValueFactory = _ => "cookie.txt" };
 
     // 下载选项
-    private static readonly Option<List<XMediaType>> TypeOption = new("-t", "--type")
+    private static readonly Option<List<MediaType>> TypeOption = new("-t", "--type")
     {
         Description = "下载媒体类型",
-        DefaultValueFactory = _ => [XMediaType.All],
+        DefaultValueFactory = _ => [MediaType.Image, MediaType.Video, MediaType.Gif],
         AllowMultipleArgumentsPerToken = true,
         Arity = ArgumentArity.OneOrMore
     };
@@ -66,7 +64,7 @@ public static class CommandLine
         var command = new RootCommand("X 媒体下载工具")
         {
             SourceOption,
-            UsernameOption,
+            UserOption,
             CookieOption,
             OutputOption,
             OutputTemplateOption,
@@ -99,23 +97,23 @@ public static class CommandLine
         {
             // 创建主机
             var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
-            
+
             // 注册服务
             builder.Services.AddSerilog();
             builder.Services.AddHostedService<MainService>();
             builder.Services.AddExtractors();
             builder.Services.AddDownloaders();
-            
+
             // 注册命令行参数
-            builder.Services.AddSingleton(new CommandLineArguments(
+            builder.Services.AddSingleton(new CommandLineOptions(
                 result.GetRequiredValue(SourceOption),
-                result.GetRequiredValue(UsernameOption),
+                result.GetRequiredValue(UserOption),
                 result.GetRequiredValue(CookieOption),
                 result.GetRequiredValue(OutputOption),
                 result.GetValue(OutputTemplateOption),
-                result.GetRequiredValue(TypeOption).Aggregate((a, b) => a | b) // 合并
+                result.GetRequiredValue(TypeOption)
             ));
-            
+
             // 运行
             await builder.Build().RunAsync(cancel);
         }

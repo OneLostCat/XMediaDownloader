@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using MediaDownloader.Models;
 using MediaDownloader.Models.X;
 
 namespace MediaDownloader;
