@@ -1,11 +1,14 @@
-﻿namespace MediaDownloader.Models.JustForFans.Api;
+﻿using System.Text.Json.Serialization;
 
-public record PlaylistBody(
-    string Action,
-    string UserHash,
-    string Title,
-    string Description,
-    string MovieHash,
-    string AccessControl,
-    string ExistingPlaylistId
-);
+namespace MediaDownloader.Models.JustForFans.Api;
+
+public record PlaylistBody
+{
+    public required string Action { get; set; }
+    public required string UserHash { get; set; }
+    public required string Title { get; set; }
+    public string Description { get; set; } = "";
+    public string MovieHash { get; set; } = "";
+    public string AccessControl { get; set; } = "Private";
+    [JsonPropertyName("ExistingPlaylistID")] public string ExistingPlaylistId { get; set; } = "0";
+}

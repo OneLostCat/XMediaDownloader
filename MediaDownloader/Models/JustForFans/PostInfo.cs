@@ -6,6 +6,7 @@ public record PostInfo
     public required DateTime Time { get; set; }
     public required PostType Type { get; set; }
     public required string Text { get; set; }
-    public required string? Video { get; set; }
-    public required List<string>? Images { get; set; }
+    public required List<string> Tags { get; set; }
+    public required string Video { get; set; }
+    public required List<string> Images { get; set; }
 }

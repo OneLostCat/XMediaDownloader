@@ -3,4 +3,4 @@
 namespace MediaDownloader.Models.JustForFans.Api;
 
 [JsonSerializable(typeof(UserInfo))]
-internal partial class UserInfoContext : JsonSerializerContext;
+public partial class UserInfoContext : JsonSerializerContext;
