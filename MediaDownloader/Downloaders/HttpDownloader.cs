@@ -90,7 +90,8 @@ public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions o
         temp.MoveTo(file.FullName);
     }
 
-    private static async Task<string>
+    // 工具方法
+    private async Task<string>
         RenderAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(Template template, T model)
     {
         // 模型
@@ -102,7 +103,7 @@ public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions o
         context.PushGlobal(script);
 
         // 设置时间格式
-        (context.BuiltinObject["date"] as DateTimeFunctions)?.Format = "%Y-%m-%d_%H-%M-%S";
+        (context.BuiltinObject["date"] as DateTimeFunctions)?.Format = options.DateTimeFormat;
 
         return await template.RenderAsync(context);
     }

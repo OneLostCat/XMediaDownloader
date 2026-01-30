@@ -29,6 +29,9 @@ public static class CommandLine
     public static readonly Option<string> OutputTemplateOption = new("-O", "--output-template")
         { Description = "输出文件路径格式" };
     
+    public static readonly Option<string> DateTimeFormatOption = new("-d", "--date-time-format")
+        { Description = "时间日期格式", DefaultValueFactory = _ => "%Y-%m-%d %H-%M-%S" };
+    
     // 下载选项
     private static readonly Option<List<MediaType>> TypeOption = new("-t", "--type")
     {
@@ -71,6 +74,7 @@ public static class CommandLine
             CookieOption,
             OutputOption,
             OutputTemplateOption,
+            DateTimeFormatOption,
             TypeOption,
             ConcurrencyOption,
             convertCommand
@@ -115,6 +119,7 @@ public static class CommandLine
                 result.GetRequiredValue(CookieOption),
                 result.GetRequiredValue(OutputOption),
                 result.GetValue(OutputTemplateOption),
+                result.GetRequiredValue(DateTimeFormatOption),
                 result.GetRequiredValue(TypeOption),
                 result.GetRequiredValue(ConcurrencyOption)
             ));

@@ -6,6 +6,7 @@ public record CommandLineOptions(
     string Cookie,
     string Output,
     string? OutputTemplate,
+    string DateTimeFormat,
     List<MediaType> Type,
     int Concurrency
 );
