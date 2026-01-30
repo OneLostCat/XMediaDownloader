@@ -492,8 +492,8 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
                     Time = post.Time,
                     Index = 1,
                     Type = MediaType.Video,
-                    Text = post.Text,
-                    Tags = string.Join(" ",post.Tags)
+                    Text = ReplaceInvalidFileNameChars(post.Text),
+                    Tags = ReplaceInvalidFileNameChars(string.Join(" ",post.Tags))
                 };
 
                 medias.Add(media);
@@ -511,8 +511,8 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
                     Time = post.Time,
                     Index = i + 1,
                     Type = MediaType.Image,
-                    Text = post.Text,
-                    Tags = string.Join(" ",post.Tags)
+                    Text = ReplaceInvalidFileNameChars(post.Text),
+                    Tags = ReplaceInvalidFileNameChars(string.Join(" ",post.Tags))
                 }));
             }
         }
@@ -577,6 +577,14 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
         var extension = Path.GetExtension(filename).ToLower();
 
         return extension;
+    }
+    
+    private string ReplaceInvalidFileNameChars(string filename)
+    {
+        var invalid = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+        var pattern = $"[{invalid}]+";
+
+        return Regex.Replace(filename, pattern, "_");
     }
 
     // 正则表达式

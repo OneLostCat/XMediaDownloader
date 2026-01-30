@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using MediaDownloader.Models;
-using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -10,7 +10,7 @@ using Scriban.Runtime;
 
 namespace MediaDownloader.Downloaders;
 
-public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions options) : IMediaDownloader
+public partial class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions options) : IMediaDownloader
 {
     private readonly HttpClient _http = BuildHttpClient();
 
@@ -63,7 +63,7 @@ public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions o
         {
             // 生成路径
             var template = Template.Parse(options.OutputTemplate ?? media.DefaultTemplate);
-            var path = await RenderAsync(template, media) + media.Extension;
+            var path = ReplaceLongSpace(await RenderAsync(template, media)) + media.Extension;
 
             // 检查文件是否存在
             var file = new FileInfo(Path.Combine(options.Output, path));
@@ -113,4 +113,13 @@ public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions o
 
         return await template.RenderAsync(context);
     }
+    
+    private static string ReplaceLongSpace(string input)
+    {
+        return LongSpaceRegex().Replace(input, " ").Trim();
+    }
+
+    // 正则表达式
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex LongSpaceRegex();
 }

@@ -17,6 +17,8 @@ public class MainService(
     {
         try
         {
+            logger.LogInformation("---------- 媒体下载器 ----------");
+            
             // 提取媒体
             var extractor = GetExtractor(args.Extractor);
             var medias = await extractor.ExtractAsync(cancel);
@@ -30,14 +32,16 @@ public class MainService(
                 var downloader = GetDownloader(grouping.Key);
                 await downloader.DownloadAsync(grouping.ToList(), cancel);
             }
+            
+            logger.LogInformation("下载完成");
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("操作取消");
+            logger.LogInformation("下载取消");
         }
         catch (Exception exception)
         {
-            logger.LogCritical(exception, "错误");
+            logger.LogCritical(exception, "下载错误");
         }
 
         // 退出
