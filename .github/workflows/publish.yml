@@ -3,15 +3,17 @@
 name: Publish
 
 on:
-  push:
-    branches: [ main ]
+  release:
+    types: [published]
 
 jobs:
   publish:
     strategy:
       matrix:
         os: [ windows-latest, ubuntu-latest ]
+
     runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,20 +21,32 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0
-          # cache: true
-
-      # - name: Restore
-      #   run: dotnet restore XMediaDownloader # --locked-mode
-
-      # - name: Build
-      #   run: dotnet build XMediaDownloader --no-restore
-
+          dotnet-version: 10.0
+          cache: true
+        
       - name: Publish
-        run: dotnet publish MediaDownloader/MediaDownloader.csproj -o publish # --no-restore 存在问题 https://github.com/dotnet/sdk/issues/29296
+        run: dotnet publish MediaDownloader/MediaDownloader.csproj -o publish
       
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: publish-${{ matrix.os }}
           path: publish
+  
+      - name: Post Process
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            zip -r MediaDownloader-${{ matrix.rid }}.zip publish/*
+          else
+            tar -czvf MediaDownloader-${{ matrix.rid }}.tar.gz publish/*
+          fi
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            MediaDownloader-*.zip
+            MediaDownloader-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
