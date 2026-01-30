@@ -77,7 +77,7 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) 
     }
     
     // 主要方法
-    public async Task<MediaCollection> ExtractAsync(CancellationToken cancel)
+    public async Task<List<MediaInfo>> ExtractAsync(CancellationToken cancel)
     {
         // 获取用户信息
         var user = await GetUserByScreenNameAsync(options.User, cancel);
@@ -88,12 +88,7 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) 
         // 获取媒体
         var medias = GetMedias(user, tweets, cancel);
 
-        return new MediaCollection
-        {
-            Medias = medias,
-            Downloader = Models.MediaDownloader.Http,
-            DefaultTemplate = "{{user}}/{{id}} {{time}} {{index}}"
-        };
+        return medias;
     }
 
     private async Task<XUser> GetUserByScreenNameAsync(string username, CancellationToken cancel)
@@ -296,6 +291,8 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) 
                 {
                     Url = item.Url,
                     Extension = item.Extension,
+                    Downloader = Models.MediaDownloader.Http,
+                    DefaultTemplate = "{{user}}/{{id}} {{time}} {{index}}",
                     Id = tweet.Id,
                     User = user.Name,
                     Time = tweet.CreationTime.LocalDateTime,

@@ -33,21 +33,19 @@ public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions o
     }
 
     // 主要方法
-    public async Task DownloadAsync(MediaCollection medias, CancellationToken cancel)
+    public async Task DownloadAsync(List<MediaInfo> medias, CancellationToken cancel)
     {
-        var template = Template.Parse(options.OutputTemplate ?? medias.DefaultTemplate);
-
-        logger.LogInformation("下载 {Count} 个媒体文件:", medias.Medias.Count);
+        logger.LogInformation("下载 {Count} 个媒体文件:", medias.Count);
 
         // 并行下载
         await Parallel.ForEachAsync(
-            medias.Medias,
+            medias,
             new ParallelOptions { MaxDegreeOfParallelism = options.Concurrency, CancellationToken = cancel },
-            async (media, token) => await DownloadTaskAsync(media, template, token)
+            async (media, token) => await DownloadTaskAsync(media, token)
         );
     }
 
-    private async ValueTask DownloadTaskAsync(MediaInfo media, Template template, CancellationToken cancel)
+    private async ValueTask DownloadTaskAsync(MediaInfo media, CancellationToken cancel)
     {
         // 弹性
         var pipeline = new ResiliencePipelineBuilder()
@@ -64,6 +62,7 @@ public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions o
         await pipeline.ExecuteAsync(async token =>
         {
             // 生成路径
+            var template = Template.Parse(options.OutputTemplate ?? media.DefaultTemplate);
             var path = await RenderAsync(template, media) + media.Extension;
 
             // 检查文件是否存在

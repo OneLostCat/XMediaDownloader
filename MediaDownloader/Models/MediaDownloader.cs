@@ -2,5 +2,6 @@
 
 public enum MediaDownloader
 {
-    Http
+    Http,
+    JustForFans
 }

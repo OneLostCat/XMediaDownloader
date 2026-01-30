@@ -18,7 +18,7 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
     private IBrowser _browser = null!;
     private IPage _page = null!;
 
-    public async Task<MediaCollection> ExtractAsync(CancellationToken cancel)
+    public async Task<List<MediaInfo>> ExtractAsync(CancellationToken cancel)
     {
         // 初始化
         await Init();
@@ -53,13 +53,8 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
 
         // 合并视频信息
         var medias = GetMedias(options.User, posts, videos);
-        
-        return new MediaCollection
-        {
-            Medias = medias,
-            Downloader = Models.MediaDownloader.Http,
-            DefaultTemplate = "{{user}}/{{id}} {{time}} {{text}} {{tags}} {{index}}"
-        };
+
+        return medias;
     }
 
     private async Task Init()
@@ -227,6 +222,7 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
             var nodes = html.DocumentNode.SelectNodes(
                 ".//div[contains(@class, 'mbsc-card') and contains(@class, 'jffPostClass') and (contains(@class, 'video') or contains(@class, 'photo'))]");
 
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             if (nodes == null)
             {
                 logger.LogWarning("无法找到帖子节点");
@@ -487,9 +483,10 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
                     Extension = video.Type switch
                     {
                         "video/mp4" => ".mp4",
-                        "video/webm" => ".webm",
                         _ => throw new ArgumentOutOfRangeException(nameof(video.Type), video.Type, "未知视频类型")
                     },
+                    Downloader = Models.MediaDownloader.Http,
+                    DefaultTemplate = "{{user}}/{{id}} {{time}} {{text}} {{tags}}",
                     User = posterName,
                     Id = post.Id,
                     Time = post.Time,
@@ -507,6 +504,8 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
                 {
                     Url = url,
                     Extension = GetExtension(url),
+                    Downloader = Models.MediaDownloader.JustForFans,
+                    DefaultTemplate = "{{user}}/{{id}} {{time}} {{text}} {{tags}} {{index}}",
                     User = posterName,
                     Id = post.Id,
                     Time = post.Time,

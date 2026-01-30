@@ -4,5 +4,5 @@ namespace MediaDownloader.Extractors;
 
 public interface IMediaExtractor
 {
-    public Task<MediaCollection> ExtractAsync(CancellationToken cancel);
+    public Task<List<MediaInfo>> ExtractAsync(CancellationToken cancel);
 }

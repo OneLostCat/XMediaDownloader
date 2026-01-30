@@ -21,9 +21,15 @@ public class MainService(
             var extractor = GetExtractor(args.Extractor);
             var medias = await extractor.ExtractAsync(cancel);
 
+            // 按下载器分类
+            var lookup = medias.ToLookup(media => media.Downloader);
+            
             // 下载媒体
-            var downloader = GetDownloader(medias.Downloader);
-            await downloader.DownloadAsync(medias, cancel);
+            foreach (var grouping in lookup)
+            {
+                var downloader = GetDownloader(grouping.Key);
+                await downloader.DownloadAsync(grouping.ToList(), cancel);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -48,6 +54,7 @@ public class MainService(
     private IMediaDownloader GetDownloader(Models.MediaDownloader downloader) => downloader switch
     {
         Models.MediaDownloader.Http => services.GetRequiredService<HttpDownloader>(),
+        Models.MediaDownloader.JustForFans => services.GetRequiredService<JustForFansDownloader>(),
         _ => throw new ArgumentOutOfRangeException(nameof(downloader), downloader, "无效的下载器")
     };
 }

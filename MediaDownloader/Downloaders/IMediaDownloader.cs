@@ -4,5 +4,5 @@ namespace MediaDownloader.Downloaders;
 
 public interface IMediaDownloader
 {
-    public Task DownloadAsync(MediaCollection medias, CancellationToken cancel);
+    public Task DownloadAsync(List<MediaInfo> medias, CancellationToken cancel);
 }

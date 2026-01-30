@@ -80,13 +80,13 @@ public static class CommandLine
             convertCommand
         };
 
-        command.SetAction(Main);
+        command.SetAction(RunAsync);
 
         // 运行
         return await command.Parse(args).InvokeAsync();
     }
 
-    private static async Task Main(ParseResult result, CancellationToken cancel)
+    private static async Task RunAsync(ParseResult result, CancellationToken cancel)
     {
         // 创建日志
         await using var logger = new LoggerConfiguration()
