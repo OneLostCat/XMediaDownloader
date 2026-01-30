@@ -227,6 +227,12 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
             var nodes = html.DocumentNode.SelectNodes(
                 ".//div[contains(@class, 'mbsc-card') and contains(@class, 'jffPostClass') and (contains(@class, 'video') or contains(@class, 'photo'))]");
 
+            if (nodes == null)
+            {
+                logger.LogWarning("无法找到帖子节点");
+                continue;
+            }
+            
             foreach (var node in nodes)
             {
                 // 提取 ID
