@@ -111,6 +111,7 @@ public static class CommandLine
             builder.Services.AddHostedService<MainService>();
             builder.Services.AddExtractors();
             builder.Services.AddDownloaders();
+            builder.Services.AddSingleton<TemplateUtilities>();
 
             // 注册命令行参数
             builder.Services.AddSingleton(new CommandLineOptions(

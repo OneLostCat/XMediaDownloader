@@ -1,16 +1,11 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
-using MediaDownloader.Models;
+﻿using MediaDownloader.Models;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
-using Scriban;
-using Scriban.Functions;
-using Scriban.Runtime;
 
 namespace MediaDownloader.Downloaders;
 
-public partial class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions options) : IMediaDownloader
+public class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineOptions options) : IMediaDownloader
 {
     private readonly HttpClient _http = BuildHttpClient();
 
@@ -61,20 +56,7 @@ public partial class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineO
         // 执行下载任务
         await pipeline.ExecuteAsync(async token =>
         {
-            // 生成路径
-            var template = Template.Parse(options.OutputTemplate ?? media.DefaultTemplate);
-            var path = ReplaceLongSpace(await RenderAsync(template, media)) + media.Extension;
-
-            // 检查文件是否存在
-            var file = new FileInfo(Path.Combine(options.Output, path));
-
-            if (file.Exists)
-            {
-                logger.LogInformation("  文件已存在: {Path}", path);
-                return;
-            }
-
-            logger.LogInformation("  {Url} -> {Path}", media.Url, path);
+            logger.LogInformation("  {Url} -> {Path}", media.Url, media.Path);
 
             // 发送请求
             var response = await _http.GetAsync(media.Url, token);
@@ -91,35 +73,9 @@ public partial class HttpDownloader(ILogger<HttpDownloader> logger, CommandLineO
             }
 
             // 移动文件
+            var file = new FileInfo(Path.Combine(options.Output, media.Path));
             file.Directory?.Create();
             temp.MoveTo(file.FullName);
         }, cancel);
     }
-
-    // 工具方法
-    private async Task<string>
-        RenderAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(Template template, T model)
-    {
-        // 模型
-        var script = new ScriptObject();
-        script.Import(model);
-
-        // 创建上下文
-        var context = new TemplateContext();
-        context.PushGlobal(script);
-
-        // 设置时间格式
-        (context.BuiltinObject["date"] as DateTimeFunctions)?.Format = options.DateTimeFormat;
-
-        return await template.RenderAsync(context);
-    }
-    
-    private static string ReplaceLongSpace(string input)
-    {
-        return LongSpaceRegex().Replace(input, " ").Trim();
-    }
-
-    // 正则表达式
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex LongSpaceRegex();
 }

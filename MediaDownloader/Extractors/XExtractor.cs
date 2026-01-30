@@ -10,10 +10,11 @@ using MediaDownloader.Models.X.Api;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using Polly;
+using Scriban;
 
 namespace MediaDownloader.Extractors;
 
-public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) : IMediaExtractor
+public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options, TemplateUtilities utilities) : IMediaExtractor
 {
     private readonly HttpClient _http = BuildHttpClient(options.Cookie);
 
@@ -86,7 +87,7 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) 
         var tweets = await GetUserMediaTweetsAsync(user, cancel);
 
         // 获取媒体
-        var medias = GetMedias(user, tweets, cancel);
+        var medias = await GetMediasAsync(user, tweets, cancel);
 
         return medias;
     }
@@ -233,8 +234,9 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) 
         return (list, nextCursor);
     }
 
-    private List<MediaInfo> GetMedias(XUser user, List<XTweet> tweets, CancellationToken cancel)
+    private async Task<List<MediaInfo>> GetMediasAsync(XUser user, List<XTweet> tweets, CancellationToken cancel)
     {
+        var template = Template.Parse("{{user}}/{{id}} {{time}} {{index}}");
         var medias = new List<MediaInfo>();
 
         // 遍历帖子
@@ -285,26 +287,35 @@ public class XExtractor(ILogger<XExtractor> logger, CommandLineOptions options) 
 
                     items.Add((video.Url, Path.GetExtension(new Uri(video.Url).Segments.Last())));
                 }
-
-                // 添加媒体项
-                medias.AddRange(items.Select(item => new MediaInfo
+                
+                var context = new TemplateData
                 {
-                    Url = item.Url,
-                    Extension = item.Extension,
-                    Downloader = Models.MediaDownloader.Http,
-                    DefaultTemplate = "{{user}}/{{id}} {{time}} {{index}}",
                     Id = tweet.Id,
                     User = user.Name,
                     Time = tweet.CreationTime.LocalDateTime,
-                    Index = i + 1,
                     Type = media.Type switch
                     {
                         XMediaType.Image => MediaType.Image,
                         XMediaType.Video => MediaType.Video,
                         XMediaType.Gif => MediaType.Gif,
                         _ => throw new ArgumentOutOfRangeException(nameof(media.Type), media.Type, "未知媒体类型")
-                    }
-                }));
+                    },
+                    Index = i + 1,
+                };
+
+                // 添加媒体项
+                foreach (var item in items)
+                {
+                    var info = new MediaInfo
+                    {
+                        Id = tweet.Id,
+                        Path = await utilities.RenderAsync(template, context),
+                        Downloader = Models.MediaDownloader.Http,
+                        Url = item.Url,
+                    };
+
+                    medias.AddRange(info);
+                }
             }
         }
 
