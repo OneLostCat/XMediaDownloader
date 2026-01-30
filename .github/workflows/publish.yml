@@ -10,44 +10,50 @@ jobs:
   publish:
     strategy:
       matrix:
-        os: [ windows-latest, ubuntu-latest ]
+        # 定义操作系统和对应的 Runtime Identifier (RID)
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
 
     runs-on: ${{ matrix.os }}
+
+    # 授予上传 Release 附件的权限
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        
+      # 安装框架
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0
           cache: true
-          cache-dependency-path: MediaDownloader/packages.lock.json
-        
-      - name: Publish
-        run: dotnet publish MediaDownloader/MediaDownloader.csproj -o publish
+          cache-dependency-path: '**/packages.lock.json' # 设置依赖缓存路径
       
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-${{ matrix.os }}
-          path: publish
-  
+      # 发布
+      - name: Publish
+        run: dotnet publish -r ${{ matrix.rid }} MediaDownloader/MediaDownloader.csproj -o publish
+
+      # 后处理
       - name: Post Process
         shell: bash
         run: |
+          cd publish
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            zip -r MediaDownloader-${{ matrix.rid }}.zip publish/*
+            zip -r ../MediaDownloader-${{ matrix.rid }}.zip ./*
           else
-            tar -czvf MediaDownloader-${{ matrix.rid }}.tar.gz publish/*
+            tar -czvf ../MediaDownloader-${{ matrix.rid }}.tar.gz ./*
           fi
       
+      # 上传至 Release
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            MediaDownloader-*.zip
-            MediaDownloader-*.tar.gz
+          files: MediaDownloader-${{ matrix.rid }}*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
