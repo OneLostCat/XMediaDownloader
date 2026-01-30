@@ -16,9 +16,9 @@
         <Authors>OneLostCat</Authors>
         <Description>MediaDownloader</Description>
         <Copyright>© 2025-2026 OneLostCat. All Rights Reserved.</Copyright>
-        <AssemblyVersion>2.0.0</AssemblyVersion>
-        <FileVersion>2.0.0</FileVersion>
-        <Version>2.0.0</Version>
+        <AssemblyVersion>2.0.7</AssemblyVersion>
+        <FileVersion>2.0.7</FileVersion>
+        <Version>2.0.7</Version>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

@@ -8,9 +8,9 @@ on:
 
 jobs:
   publish:
+    # 定义操作系统和对应的 Runtime Identifier (RID)
     strategy:
       matrix:
-        # 定义操作系统和对应的 Runtime Identifier (RID)
         include:
           - os: windows-latest
             rid: win-x64

@@ -65,8 +65,8 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
     private async Task Init()
     {
         // 下载浏览器
-        logger.LogDebug("下载浏览器...");
-
+        logger.LogInformation("下载浏览器");
+        
         var fetcher = new BrowserFetcher();
         await fetcher.DownloadAsync();
 
@@ -74,14 +74,15 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
         Puppeteer.ExtraJsonSerializerContext = ResponseContext.Default;
 
         // 启动浏览器
-        logger.LogDebug("启动浏览器");
+        logger.LogInformation("启动浏览器");
 
         _browser = await Puppeteer.LaunchAsync(new LaunchOptions
         {
             Headless = true,
             Args =
             [
-                "--disable-blink-features=AutomationControlled" // 移除自动化标志
+                "--disable-blink-features=AutomationControlled", // 移除自动化标志
+                "--no-sandbox" // 禁用沙箱模式，适配 Linux 环境
             ],
             DefaultViewport = null // 视口大小与窗口同步
         });
@@ -90,7 +91,7 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
         _page = (await _browser.PagesAsync()).First() ?? await _browser.NewPageAsync();
 
         // 设置 Cookie
-        logger.LogDebug("加载 Cookie");
+        logger.LogInformation("加载 Cookie");
 
         var cookieText = await File.ReadAllTextAsync(options.Cookie);
         var cookies = cookieText
@@ -136,7 +137,7 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
     // 主要方法
     private async Task<(string hash, string userId)> GetHashAndPosterIdAsync(string user)
     {
-        logger.LogDebug("获取 Hash 和 PosterID");
+        logger.LogInformation("获取 Hash 和 PosterID");
 
         // 获取页面内容
         var text = await GetAsync($"{BaseUrl}/{user}");
@@ -164,7 +165,7 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
 
     private async Task<UserInfo> GetUserInfoAsync(string user, string hash)
     {
-        logger.LogDebug("获取发布者信息");
+        logger.LogInformation("获取发布者信息");
 
         // 获取 JSON
         var text = await GetAsync($"{BaseUrl}/ajax/getAssetCount.php?User={user}&Ver={hash}");
@@ -324,7 +325,7 @@ public partial class JustForFansExtractor(ILogger<JustForFansExtractor> logger, 
 
     private async Task<string> GetPlaylistIdAsync(string userHash, string title)
     {
-        logger.LogDebug("获取播放列表 ID: {Title}", title);
+        logger.LogInformation("获取播放列表 ID: {Title}", title);
 
         // 获取
         var text = await GetAsync($"{BaseUrl}/ajax/playlists.php?Action=loadformovie&UserHash={userHash}&Hash=");
