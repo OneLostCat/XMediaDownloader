@@ -43,10 +43,11 @@ jobs:
       - name: Post Process
         shell: bash
         run: |
+          cd publish
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            7z a MediaDownloader-${{ matrix.rid }}.zip publish/*
+            7z a ../MediaDownloader-${{ matrix.rid }}.zip ./*
           else
-            tar -czvf MediaDownloader-${{ matrix.rid }}.tar.gz publish/*
+            tar -czvf ../MediaDownloader-${{ matrix.rid }}.tar.gz ./*
           fi
       
       # 上传至 Release
